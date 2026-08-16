@@ -1,23 +1,26 @@
-import { ipAddress } from "@vercel/functions";
 import type { NextRequest } from "next/server";
 
 /**
  * The single, authoritative way to determine a request's source IP.
  *
- * On Vercel, `@vercel/functions`'s `ipAddress()` reads the IP that Vercel's own
- * edge network recorded for the connection — not an arbitrary client-supplied
- * header. Client-controlled headers (a raw `x-forwarded-for` parsed by hand,
- * or any `ip` field in a request body) must never be trusted for security
- * decisions; a spoofed request can set both to anything.
+ * On Netlify, requests reaching the app have already passed through Netlify's
+ * edge, which sets `x-nf-client-connection-ip` to the actual TCP connection's
+ * source IP — Netlify's own infrastructure sets this at the edge, so a client
+ * cannot forge it by sending its own copy of the header. This is the
+ * Netlify-documented mechanism for reading a trustworthy client IP inside a
+ * Next.js Route Handler (there is no framework-level equivalent of Vercel's
+ * `ipAddress()` helper, since IP resolution is platform-specific). Client-
+ * controlled inputs — a raw `x-forwarded-for` parsed by hand, or any `ip`
+ * field in a request body — must never be trusted for security decisions.
  *
- * Locally (no Vercel edge in front of the request), ipAddress() returns
- * undefined, so we fall back to `x-forwarded-for` for developer convenience.
- * That fallback path is NEVER reached in Vercel production traffic and must
- * not be relied on for security there.
+ * Locally (no Netlify edge in front of the request), that header is absent,
+ * so we fall back to `x-forwarded-for` for developer convenience. That
+ * fallback path is NEVER reached in Netlify production traffic and must not
+ * be relied on for security there.
  */
 export function getClientIp(request: NextRequest | Request): string | null {
-  const fromVercel = ipAddress(request);
-  if (fromVercel) return normalizeIp(fromVercel);
+  const fromNetlify = request.headers.get("x-nf-client-connection-ip");
+  if (fromNetlify) return normalizeIp(fromNetlify);
 
   if (process.env.NODE_ENV !== "production") {
     const forwarded = request.headers.get("x-forwarded-for");

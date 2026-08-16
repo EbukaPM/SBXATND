@@ -5,7 +5,7 @@ clock in/out with a personal Attendance ID, verified against the office's live p
 IP (via a small on-site Network Agent) and an optional daily QR code — all evaluated
 server-side, on server time, with a full audit trail.
 
-- **App**: Next.js (App Router) + TypeScript + Tailwind, deployed on Vercel
+- **App**: Next.js (App Router) + TypeScript + Tailwind, deployed on Netlify
 - **Database**: PostgreSQL via Prisma (any standard Postgres connection string)
 - **Network verification**: `network-agent/` (Python), runs on a machine physically inside the office
 - **Attendance security model**: Attendance ID + Office Network + Daily QR + server time — see [docs/SECURITY.md](docs/SECURITY.md)
@@ -31,9 +31,9 @@ Postgres locally).
 
 | Doc | Covers |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request flow, why Vercel-native choices were made |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request flow, why Netlify-native choices were made |
 | [docs/DATABASE.md](docs/DATABASE.md) | Schema, providers, migrations |
-| [docs/DEPLOYMENT_VERCEL.md](docs/DEPLOYMENT_VERCEL.md) | End-to-end production deployment |
+| [docs/DEPLOYMENT_NETLIFY.md](docs/DEPLOYMENT_NETLIFY.md) | End-to-end production deployment |
 | [docs/OFFICE_NETWORK_AGENT_SETUP.md](docs/OFFICE_NETWORK_AGENT_SETUP.md) | Installing the on-site Network Agent (Windows/Linux/macOS) |
 | [docs/QR_ATTENDANCE.md](docs/QR_ATTENDANCE.md) | QR generation, validation, session lifecycle |
 | [docs/SECURITY.md](docs/SECURITY.md) | Threat model, what is/isn't verified, and why |
@@ -47,7 +47,7 @@ src/
   app/
     attendance/            kiosk UI + QR scan landing route
     admin/                 admin dashboard (route-grouped: (dashboard) is auth-protected)
-    api/                   route handlers (attendance, network, qr, reports, cron)
+    api/                   route handlers (attendance, network, qr, reports, cron, blob serving)
   components/               ui/ (design system primitives), attendance/, branding/
   lib/
     attendance/             time rules, settings, the clock-in/out engine, housekeeping
@@ -56,8 +56,9 @@ src/
     qr/                     token generation, session lifecycle, PDF rendering
     security/               Attendance ID hashing, persistent rate limiting
     reports/                CSV/Excel/PDF report generation
-    storage/                object storage abstraction (Vercel Blob)
+    storage/                object storage abstraction (Netlify Blobs)
 prisma/                     schema.prisma, seed.ts
+netlify/functions/           Scheduled Functions that trigger the /api/cron/* routes
 network-agent/               Python agent that runs inside the office
 tests/                       unit/ (pure logic) + integration/ (needs DATABASE_URL)
 ```

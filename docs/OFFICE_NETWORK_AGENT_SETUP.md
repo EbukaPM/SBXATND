@@ -4,7 +4,7 @@ The Network Agent is a small Python script (`network-agent/agent.py`) that runs 
 physically inside the office — it's what lets the attendance system keep tracking Starlink's
 changing public IP without anyone touching the app's code or config.
 
-It is **not** deployed to Vercel. Run it on an office PC, a small Linux box, or a Raspberry
+It is **not** deployed to Netlify. Run it on an office PC, a small Linux box, or a Raspberry
 Pi that's on and connected to the office network essentially all the time.
 
 ## 1. Register the network in the admin dashboard first
