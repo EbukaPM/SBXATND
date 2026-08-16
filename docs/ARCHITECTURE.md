@@ -2,11 +2,11 @@
 
 ## Why this shape
 
-The brief requires the app to run on Vercel's serverless platform, which rules out a
-long-running Express process, in-memory state, and local-filesystem persistence. Every
-design decision below follows from that constraint plus the core requirement: attendance
-can only be recorded when the server itself can prove presence, time, and identity — never
-by trusting anything the client sends.
+The app runs on Netlify's serverless platform (Next.js via `@netlify/plugin-nextjs`), which
+rules out a long-running Express process, in-memory state, and local-filesystem persistence.
+Every design decision below follows from that constraint plus the core requirement:
+attendance can only be recorded when the server itself can prove presence, time, and
+identity — never by trusting anything the client sends.
 
 ## Components
 
@@ -21,12 +21,12 @@ by trusting anything the client sends.
                        |
                        v
                 ┌─────────────┐
-                │   VERCEL    │
+                │   NETLIFY   │
                 │  Next.js    │  App Router pages + Route Handlers + Server Actions
-                │ Frontend/API│
+                │ Frontend/API│  (+ Scheduled Functions in netlify/functions/)
                 └──────┬──────┘
                        |
-                 PostgreSQL (Neon/Supabase/Vercel Postgres/any standard provider)
+                 PostgreSQL (Neon/Supabase/any standard provider)
                        |
                        v
                Attendance Data
@@ -38,7 +38,7 @@ by trusting anything the client sends.
                 Signed heartbeat (HMAC, timestamped, replay-protected)
                        |
                        v
-                POST /api/network/heartbeat  →  Vercel  →  PostgreSQL
+                POST /api/network/heartbeat  →  Netlify  →  PostgreSQL
 ```
 
 The Network Agent is deliberately **not** part of the Next.js app. It has to run
@@ -94,7 +94,7 @@ which requires a reason and is fully audited.
 
 - **Route Handlers** (`app/api/**/route.ts`) are used for anything a non-browser client calls:
   the kiosk's fetch requests, the Network Agent's heartbeat/registration, report downloads,
-  and Vercel Cron targets.
+  and the `/api/cron/*` targets that Netlify's Scheduled Functions trigger.
 - **Server Actions** (`lib/actions/**`) back every admin form (employees, offices, QR,
   settings, holidays, admins). They get CSRF protection and same-origin enforcement from the
   framework for free, and they let admin pages stay server components with progressive

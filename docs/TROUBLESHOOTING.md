@@ -28,13 +28,13 @@
   deleted/moved and `REGISTRATION_TOKEN` in `.env` is now stale (already consumed), regenerate
   the token in Admin → Offices & Network → **Regenerate Agent Token**, put the new value in
   `.env`, and re-run `python agent.py register`.
-- **Vercel endpoint unreachable from the office**: run `python agent.py test` — if IP
+- **Netlify endpoint unreachable from the office**: run `python agent.py test` — if IP
   detection succeeds but the heartbeat step fails with a connection error, check:
   - Firewall rules blocking outbound HTTPS (443) from the agent's machine.
   - DNS resolution for your `SERVER_URL` domain from that machine (`nslookup <domain>`).
   - Whether the whole office internet connection is down (if so, attendance is expected to
     fail anyway — the office isn't reachable from the internet either).
-- **Vercel endpoint down**: check the Vercel dashboard / status page.
+- **Netlify endpoint down**: check the Netlify dashboard / status page.
 
 ## Employee says their Attendance ID doesn't work but they're sure it's right
 
@@ -61,12 +61,18 @@
   itself doesn't need connectivity, but the Prisma config loader expects the var to exist).
 - **Migrations fail against a pooled connection**: make sure `DIRECT_URL` is set to a
   non-pooled connection string — `prisma migrate` needs it for DDL.
-- **Logo/QR PDF upload fails in production**: confirm `BLOB_READ_WRITE_TOKEN` is set for that
-  environment (Preview and Production have separate tokens if you created separate Blob
-  stores).
-- **Cron jobs return 401**: `CRON_SECRET` must be set as a Vercel project env var — Vercel
-  then sends it automatically as `Authorization: Bearer <value>` on cron-triggered requests.
-  If you're curling a cron endpoint manually to test, add that header yourself.
+- **Logo/QR PDF upload fails locally**: expected without the Netlify CLI — Netlify Blobs
+  credentials are injected automatically only inside Netlify's own runtime (production, or
+  `netlify dev`). QR codes still work for attendance, just without a downloadable PDF/PNG
+  until deployed. See `docs/DEPLOYMENT_NETLIFY.md`.
+- **Logo/QR PDF upload fails in production**: this generally means the site somehow lost
+  access to Netlify Blobs (rare, since it's automatic) — check the function logs for the
+  actual error from `@netlify/blobs`.
+- **Scheduled functions return 401 / never seem to run**: `CRON_SECRET` must be set as a
+  Netlify environment variable and match what `netlify/functions/*.ts` sends as
+  `Authorization: Bearer <value>` when calling `/api/cron/*`. Also remember scheduled
+  functions only run on **published production deploys**, never deploy previews — check the
+  function's logs in Netlify → Functions for its actual invocation history.
 
 ## "It worked in Preview but not Production" (or vice versa)
 

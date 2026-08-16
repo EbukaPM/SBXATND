@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Scheduled Functions (Netlify's Cron equivalent) — see netlify/functions/*.ts.
+# Schedules are declared inline in each function via `export const config`;
+# duplicating them here is unnecessary but left as documentation of intent:
+#   sweep-qr:            */5 * * * *
+#   stale-networks:       */10 * * * *
+#   daily-housekeeping:   5 0 * * * (UTC)

@@ -2,10 +2,10 @@
 
 PostgreSQL via Prisma. Any standard `postgresql://` connection string works — the app has
 no provider-specific code. `DIRECT_URL` is used by Prisma Migrate for schema changes when
-`DATABASE_URL` is a pooled connection (Neon, Supabase, PgBouncer, Vercel Postgres) — pooled
-connections can't run `CREATE INDEX CONCURRENTLY`/DDL transactions reliably. If your
-provider gives you both a pooled and a direct URL, set both; if it only gives you one,
-set both env vars to the same value.
+`DATABASE_URL` is a pooled connection (Neon, Supabase, PgBouncer) — pooled connections can't
+run `CREATE INDEX CONCURRENTLY`/DDL transactions reliably. If your provider gives you both a
+pooled and a direct URL, set both; if it only gives you one, set both env vars to the same
+value.
 
 ## Choosing a provider
 
@@ -13,8 +13,7 @@ set both env vars to the same value.
 |---|---|
 | **Neon** | Recommended default. Generous free tier, branching for preview deployments, gives you both pooled and direct URLs out of the box. |
 | **Supabase Postgres** | Fine alternative, also has a free tier and both connection string flavors. |
-| **Vercel Postgres** | Convenient if you want everything in one dashboard; under the hood it's Neon. |
-| Self-hosted / any other Postgres | Works as long as it's reachable from Vercel's serverless functions (public endpoint + TLS, or a Vercel-supported private networking integration). |
+| Self-hosted / any other Postgres | Works as long as it's reachable from Netlify's serverless functions (public endpoint + TLS). |
 
 ## Local development
 
@@ -61,7 +60,7 @@ See `prisma/schema.prisma` for the source of truth. Grouped by concern:
 - **Rate limiting**: `RateLimitBucket` — a persistent, Postgres-backed limiter (see
   `lib/security/rateLimit.ts`). An in-memory limiter would reset on every cold start and
   wouldn't be shared across concurrent serverless instances, so it can't work correctly on
-  Vercel.
+  Netlify's serverless functions.
 
 ## Migrations
 
@@ -70,7 +69,7 @@ npm run db:migrate    # dev: creates + applies a new migration from schema chang
 npm run db:deploy     # production: applies existing migrations, non-interactive
 ```
 
-`db:deploy` is what CI/CD (or you, manually, before/after a Vercel deploy) should run against
+`db:deploy` is what CI/CD (or you, manually, before/after a Netlify deploy) should run against
 production — it never generates new migrations or drops data. Never run `prisma migrate reset`
 against a production database; it drops the schema.
 

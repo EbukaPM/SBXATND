@@ -39,7 +39,7 @@ office's timezone), computed at generation time. At scan time
 - `now < validFrom` → `NOT_YET_ACTIVE`
 - `now > validUntil` → `EXPIRED`
 
-`lib/qr/manage.ts#sweepQrStatuses` (run every 5 minutes via Vercel Cron,
+`lib/qr/manage.ts#sweepQrStatuses` (run every 5 minutes via a Netlify Scheduled Function,
 `/api/cron/sweep-qr`) flips the stored `status` between `SCHEDULED`/`ACTIVE`/`EXPIRED` so the
 admin UI reflects reality, but the actual accept/reject decision at scan time is always
 recomputed live against `validFrom`/`validUntil` — attendance security never depends on the
