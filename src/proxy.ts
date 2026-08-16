@@ -9,7 +9,7 @@ const ADMIN_SESSION_COOKIE = "attendance_admin_session";
  * still calls requireUser()/requirePermission() server-side (lib/auth/guard.ts),
  * which is what actually enforces auth and RBAC.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {

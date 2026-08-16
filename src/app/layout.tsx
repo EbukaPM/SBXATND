@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { getCompanySettings } from "@/lib/company/settings";
+import { getCompanySettingsSafe } from "@/lib/company/settings";
 import { BrandStyle } from "@/components/branding/BrandStyle";
 
 const geistSans = Geist({
@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const company = await getCompanySettings();
+  const company = await getCompanySettingsSafe();
   return {
     title: `${company.companyName} — Attendance`,
     description: `${company.companyName} digital office attendance system`,
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const company = await getCompanySettings();
+  const company = await getCompanySettingsSafe();
 
   return (
     <html

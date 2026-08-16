@@ -25,6 +25,20 @@ export async function getCompanySettings(): Promise<CompanySettings> {
   });
 }
 
+/**
+ * Same as getCompanySettings, but falls back to in-memory defaults instead of
+ * throwing if the database is unreachable. Used by the root layout, which
+ * renders for every request (including error pages) — a DB hiccup there must
+ * degrade to unbranded defaults, not take the whole site down.
+ */
+export async function getCompanySettingsSafe(): Promise<CompanySettings> {
+  try {
+    return await getCompanySettings();
+  } catch {
+    return { id: SINGLETON_ID, updatedAt: new Date(), ...DEFAULTS };
+  }
+}
+
 export async function updateCompanySettings(
   data: Partial<Omit<CompanySettings, "id" | "updatedAt">>
 ): Promise<CompanySettings> {

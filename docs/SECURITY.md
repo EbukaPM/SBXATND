@@ -100,7 +100,7 @@ limit/window/lockout settings.
   "require elevated permission." Every server action and API route that mutates state calls
   `requirePermission()` (`lib/auth/guard.ts`) — the UI hiding a button is not the enforcement
   boundary.
-- `middleware.ts` does a cheap, Edge-safe cookie-presence check as a first line of defense,
+- `src/proxy.ts` does a cheap, Edge-safe cookie-presence check as a first line of defense,
   but is explicitly documented as **not** the source of truth (Prisma can't run on the Edge
   runtime) — every page/action still calls `requireUser()`/`requirePermission()` server-side.
 
