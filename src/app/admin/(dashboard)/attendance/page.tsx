@@ -1,0 +1,151 @@
+import Link from "next/link";
+import { prisma } from "@/lib/db/prisma";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { formatInTimeZone } from "date-fns-tz";
+import type { Prisma } from "@prisma/client";
+
+export const dynamic = "force-dynamic";
+
+const STATUS_STYLES: Record<string, string> = {
+  EARLY: "bg-blue-100 text-blue-700",
+  ON_TIME: "bg-green-100 text-green-700",
+  LATE: "bg-red-100 text-red-700",
+  MISSED_CLOCK_OUT: "bg-amber-100 text-amber-800",
+  ABSENT: "bg-gray-200 text-gray-700",
+  MANUALLY_ADJUSTED: "bg-purple-100 text-purple-700",
+};
+
+export default async function AttendanceListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string; q?: string; status?: string; page?: string }>;
+}) {
+  const { from, to, q, status, page } = await searchParams;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const pageSize = 30;
+
+  const where: Prisma.AttendanceRecordWhereInput = {};
+  if (from || to) {
+    where.attendanceDate = {};
+    if (from) where.attendanceDate.gte = new Date(`${from}T00:00:00Z`);
+    if (to) where.attendanceDate.lte = new Date(`${to}T00:00:00Z`);
+  }
+  if (status) where.clockInStatus = status as never;
+  if (q) {
+    where.employee = {
+      OR: [
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+        { employeeNumber: { contains: q, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  const [records, total] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where,
+      include: { employee: true, office: true },
+      orderBy: [{ attendanceDate: "desc" }, { clockIn: "desc" }],
+      skip: (pageNum - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.attendanceRecord.count({ where }),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Attendance</h1>
+
+      <form className="flex flex-wrap gap-2">
+        <Input type="date" name="from" defaultValue={from} className="w-40" />
+        <Input type="date" name="to" defaultValue={to} className="w-40" />
+        <Input name="q" defaultValue={q} placeholder="Search employee…" className="w-56" />
+        <select name="status" defaultValue={status ?? ""} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">All statuses</option>
+          <option value="EARLY">Early</option>
+          <option value="ON_TIME">On time</option>
+          <option value="LATE">Late</option>
+          <option value="MISSED_CLOCK_OUT">Missed clock-out</option>
+          <option value="MANUALLY_ADJUSTED">Manually adjusted</option>
+        </select>
+        <Button type="submit" variant="outline">
+          Filter
+        </Button>
+        <Button asChild variant="outline">
+          <a href={`/api/reports/daily?format=csv&from=${from ?? ""}&to=${to ?? ""}`}>Export CSV</a>
+        </Button>
+      </form>
+
+      <div className="overflow-x-auto rounded-lg border bg-card">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="px-4 py-2">Date</th>
+              <th className="px-4 py-2">Employee</th>
+              <th className="px-4 py-2">Office</th>
+              <th className="px-4 py-2">Clock In</th>
+              <th className="px-4 py-2">Clock Out</th>
+              <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2">Type</th>
+              <th className="px-4 py-2">Method</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((r) => (
+              <tr key={r.id} className="border-b last:border-0">
+                <td className="px-4 py-2">{r.attendanceDate.toISOString().slice(0, 10)}</td>
+                <td className="px-4 py-2">
+                  {r.employee.firstName} {r.employee.lastName}
+                </td>
+                <td className="px-4 py-2">{r.office.name}</td>
+                <td className="px-4 py-2">{r.clockIn ? formatInTimeZone(r.clockIn, "Africa/Lagos", "h:mm a") : "—"}</td>
+                <td className="px-4 py-2">
+                  {r.clockOut ? formatInTimeZone(r.clockOut, "Africa/Lagos", "h:mm a") : r.clockIn ? "Missing" : "—"}
+                </td>
+                <td className="px-4 py-2">
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[r.clockInStatus ?? ""] ?? ""}`}>
+                    {r.clockInStatus ?? "—"}
+                  </span>
+                </td>
+                <td className="px-4 py-2">{r.attendanceType}</td>
+                <td className="px-4 py-2">{r.verificationMethod ?? "—"}</td>
+                <td className="px-4 py-2 text-right">
+                  <Link href={`/admin/attendance/${r.id}`} className="text-primary hover:underline">
+                    Correct
+                  </Link>
+                </td>
+              </tr>
+            ))}
+            {records.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                  No attendance records found.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          Page {pageNum} of {Math.max(1, Math.ceil(total / pageSize))} ({total} records)
+        </span>
+        <div className="flex gap-2">
+          {pageNum > 1 ? (
+            <Link className="hover:underline" href={`?page=${pageNum - 1}`}>
+              Previous
+            </Link>
+          ) : null}
+          {pageNum * pageSize < total ? (
+            <Link className="hover:underline" href={`?page=${pageNum + 1}`}>
+              Next
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}

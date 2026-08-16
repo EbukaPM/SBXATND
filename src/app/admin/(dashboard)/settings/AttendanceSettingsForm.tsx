@@ -1,0 +1,77 @@
+"use client";
+
+import { useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { updateAttendanceSettingsAction } from "@/lib/actions/settings";
+import type { AttendanceSettings } from "@prisma/client";
+
+export function AttendanceSettingsForm({ settings }: { settings: AttendanceSettings }) {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <form
+      action={(fd) => startTransition(() => updateAttendanceSettingsAction(fd))}
+      className="grid grid-cols-2 gap-4 md:grid-cols-3"
+    >
+      <div>
+        <label className="mb-1 block text-sm font-medium">Timezone</label>
+        <Input name="timezone" defaultValue={settings.timezone} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Work start</label>
+        <Input type="time" name="workStart" defaultValue={settings.workStart} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Grace period (minutes)</label>
+        <Input type="number" name="gracePeriodMinutes" defaultValue={settings.gracePeriodMinutes} min={0} max={180} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Work end</label>
+        <Input type="time" name="workEnd" defaultValue={settings.workEnd} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Attendance mode</label>
+        <select name="attendanceMode" defaultValue={settings.attendanceMode} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+          <option value="NETWORK_ONLY">Network only</option>
+          <option value="QR_AND_NETWORK">QR + Network (recommended)</option>
+          <option value="QR_ONLY">QR only</option>
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">QR session length (minutes)</label>
+        <Input type="number" name="qrSessionMinutes" defaultValue={settings.qrSessionMinutes} min={1} max={120} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Heartbeat interval (minutes)</label>
+        <Input type="number" name="networkHeartbeatIntervalMinutes" defaultValue={settings.networkHeartbeatIntervalMinutes} min={1} max={120} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Stale threshold (minutes)</label>
+        <Input type="number" name="networkStaleThresholdMinutes" defaultValue={settings.networkStaleThresholdMinutes} min={1} max={1440} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium">Kiosk reset (seconds)</label>
+        <Input type="number" name="kioskResetSeconds" defaultValue={settings.kioskResetSeconds} min={2} max={60} />
+      </div>
+
+      <div className="col-span-full flex flex-wrap gap-6 pt-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="weekendIsOvertime" defaultChecked={settings.weekendIsOvertime} /> Weekend attendance is overtime
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="holidayIsOvertime" defaultChecked={settings.holidayIsOvertime} /> Holiday attendance is overtime
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="crossOfficeAttendance" defaultChecked={settings.crossOfficeAttendance} /> Allow cross-office QR/network
+        </label>
+      </div>
+
+      <div className="col-span-full">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Save attendance settings"}
+        </Button>
+      </div>
+    </form>
+  );
+}

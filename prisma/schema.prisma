@@ -1,0 +1,450 @@
+// Digital Office Attendance & Clocking System — Prisma schema
+// See docs/DATABASE.md for design notes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth / RBAC
+// ---------------------------------------------------------------------------
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  HR
+  VIEWER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         AdminRole @default(VIEWER)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions       Session[]
+  auditLogs      AuditLog[]
+  qrCodesGenerated    AttendanceQrCode[] @relation("QrGeneratedBy")
+  qrCodesDeactivated  AttendanceQrCode[] @relation("QrDeactivatedBy")
+  attendanceCorrections AttendanceCorrection[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  ipAddress String?
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Organization
+// ---------------------------------------------------------------------------
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("departments")
+}
+
+model Office {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  timezone  String   @default("Africa/Lagos")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees       Employee[]
+  officeNetworks  OfficeNetwork[]
+  qrCodes         AttendanceQrCode[]
+  attendanceRecords AttendanceRecord[]
+  qrSessions      QrAttendanceSession[]
+
+  @@map("offices")
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  EXITED
+}
+
+model Employee {
+  id               String           @id @default(cuid())
+  employeeNumber   String           @unique
+  // HMAC-SHA256(secret, normalized uppercase Attendance ID), hex-encoded.
+  // Deterministic keyed hash: doubles as the unique index for O(1) lookup at
+  // clock-in and as the stored credential — the plaintext ID is never persisted.
+  // See lib/security/attendanceId.ts
+  attendanceIdLookup String         @unique
+  firstName        String
+  middleName       String?
+  lastName         String
+  email            String?          @unique
+  phone            String?
+  departmentId     String?
+  jobTitle         String?
+  employmentStatus EmploymentStatus @default(ACTIVE)
+  dateEmployed     DateTime?
+  profilePhotoUrl  String?
+  officeId         String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  office     Office      @relation(fields: [officeId], references: [id])
+
+  attendanceRecords AttendanceRecord[]
+  attendanceIdHistory AttendanceIdHistory[]
+
+  @@index([officeId])
+  @@index([departmentId])
+  @@index([employmentStatus])
+  @@map("employees")
+}
+
+// Keeps an auditable trail every time an Attendance ID is regenerated.
+model AttendanceIdHistory {
+  id            String   @id @default(cuid())
+  employeeId    String
+  oldIdHash     String
+  changedById   String?
+  changedAt     DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@map("attendance_id_history")
+}
+
+// ---------------------------------------------------------------------------
+// Office network verification
+// ---------------------------------------------------------------------------
+
+enum NetworkStatus {
+  VERIFIED
+  STALE
+  UNVERIFIED
+  DISABLED
+}
+
+model OfficeNetwork {
+  id                     String        @id @default(cuid())
+  officeId               String
+  name                   String
+  currentPublicIp        String?
+  cidr                   String?
+  status                 NetworkStatus @default(UNVERIFIED)
+  agentId                String?       @unique
+  // One-time bootstrap credential (bcrypt hash only, never stored raw). Consumed
+  // on first successful registration; admin regenerates it to re-pair an agent.
+  registrationTokenHash  String?
+  registrationTokenUsedAt DateTime?
+  // Ongoing HMAC signing secret issued at registration, analogous to a webhook
+  // signing secret — verifying a signature requires the raw key server-side,
+  // so (unlike the registration token) it cannot be reduced to a hash.
+  agentSigningSecret     String?
+  lastVerifiedAt         DateTime?
+  failMode               String        @default("FAIL_CLOSED") // FAIL_CLOSED | FAIL_OPEN
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  office     Office              @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  heartbeats NetworkHeartbeat[]
+
+  @@index([officeId])
+  @@map("office_networks")
+}
+
+model NetworkHeartbeat {
+  id              String   @id @default(cuid())
+  officeNetworkId String
+  agentId         String
+  sourceIp        String
+  reportedIp      String
+  timestamp       DateTime
+  status          String
+  createdAt       DateTime @default(now())
+
+  officeNetwork OfficeNetwork @relation(fields: [officeNetworkId], references: [id], onDelete: Cascade)
+
+  @@index([officeNetworkId, createdAt])
+  @@map("network_heartbeats")
+}
+
+// ---------------------------------------------------------------------------
+// Holidays
+// ---------------------------------------------------------------------------
+
+model Holiday {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime @db.Date
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date])
+  @@map("holidays")
+}
+
+// ---------------------------------------------------------------------------
+// Attendance
+// ---------------------------------------------------------------------------
+
+enum ClockInStatus {
+  EARLY
+  ON_TIME
+  LATE
+  MISSED_CLOCK_OUT
+  ABSENT
+  MANUALLY_ADJUSTED
+}
+
+enum AttendanceType {
+  REGULAR
+  WEEKEND_OVERTIME
+  HOLIDAY_OVERTIME
+}
+
+enum VerificationMethod {
+  NETWORK
+  QR_NETWORK
+  QR_ONLY
+  MANUAL_ADMIN
+}
+
+model AttendanceRecord {
+  id                    String              @id @default(cuid())
+  employeeId            String
+  officeId              String
+  attendanceDate        DateTime            @db.Date
+  clockIn               DateTime?
+  clockOut              DateTime?
+  clockInStatus         ClockInStatus?
+  attendanceType         AttendanceType      @default(REGULAR)
+  minutesLate           Int                 @default(0)
+  totalMinutesWorked    Int?
+  clockInIp             String?
+  clockOutIp            String?
+  clockInUserAgent      String?
+  clockOutUserAgent     String?
+  clockInNetworkId      String?
+  clockOutNetworkId     String?
+  clockInQrId           String?
+  clockOutQrId           String?
+  verificationMethod    VerificationMethod?
+  manualAdjustment      Boolean             @default(false)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  office   Office   @relation(fields: [officeId], references: [id])
+
+  corrections AttendanceCorrection[]
+
+  @@unique([employeeId, attendanceDate])
+  @@index([officeId, attendanceDate])
+  @@index([attendanceDate])
+  @@map("attendance_records")
+}
+
+model AttendanceCorrection {
+  id                  String   @id @default(cuid())
+  attendanceRecordId  String
+  changedById         String
+  changedAt           DateTime @default(now())
+  field               String
+  originalValue       String?
+  newValue            String?
+  reason              String
+  ipAddress           String?
+
+  attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+  changedBy        User             @relation(fields: [changedById], references: [id])
+
+  @@index([attendanceRecordId])
+  @@map("attendance_corrections")
+}
+
+// ---------------------------------------------------------------------------
+// QR attendance
+// ---------------------------------------------------------------------------
+
+enum QrStatus {
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  DEACTIVATED
+}
+
+model AttendanceQrCode {
+  id              String    @id @default(cuid())
+  officeId        String
+  attendanceDate  DateTime  @db.Date
+  tokenHash       String    @unique
+  tokenIdentifier String    @unique // short public identifier used in the URL, not secret
+  validFrom       DateTime
+  validUntil      DateTime
+  status          QrStatus  @default(SCHEDULED)
+  // Rendered once at generation time and stored in object storage so "download
+  // anytime" works without ever persisting the raw secret token as DB text.
+  pdfUrl          String?
+  pngUrl          String?
+  generatedById   String
+  generatedAt     DateTime  @default(now())
+  deactivatedById String?
+  deactivatedAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  office       Office                @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  generatedBy  User                  @relation("QrGeneratedBy", fields: [generatedById], references: [id])
+  deactivatedBy User?                @relation("QrDeactivatedBy", fields: [deactivatedById], references: [id])
+  sessions     QrAttendanceSession[]
+
+  // Only one ACTIVE/SCHEDULED QR per office+day is enforced in application logic
+  // (lib/qr/manage.ts, inside a transaction) since DEACTIVATED/EXPIRED rows must
+  // be allowed to repeat across regenerations.
+  @@index([officeId, attendanceDate])
+  @@index([officeId, attendanceDate, status])
+  @@map("attendance_qr_codes")
+}
+
+enum QrSessionStatus {
+  ACTIVE
+  USED
+  EXPIRED
+}
+
+model QrAttendanceSession {
+  id               String          @id @default(cuid())
+  qrCodeId         String
+  officeId         String
+  sessionTokenHash String          @unique
+  sourceIp         String
+  userAgent        String?
+  createdAt        DateTime        @default(now())
+  expiresAt        DateTime
+  usedAt           DateTime?
+  status           QrSessionStatus @default(ACTIVE)
+
+  qrCode AttendanceQrCode @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+  office Office           @relation(fields: [officeId], references: [id])
+
+  @@index([qrCodeId])
+  @@index([expiresAt])
+  @@map("qr_attendance_sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+model CompanySettings {
+  id              String   @id @default("singleton")
+  companyName     String   @default("Company")
+  logoUrl         String?
+  primaryColor    String   @default("#0F766E")
+  secondaryColor  String   @default("#0EA5E9")
+  accentColor     String   @default("#F59E0B")
+  address         String?
+  phone           String?
+  email           String?
+  website         String?
+  updatedAt       DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+enum AttendanceMode {
+  NETWORK_ONLY
+  QR_AND_NETWORK
+  QR_ONLY
+}
+
+model AttendanceSettings {
+  id                       String         @id @default("singleton")
+  timezone                 String         @default("Africa/Lagos")
+  workStart                String         @default("09:00")
+  gracePeriodMinutes        Int            @default(15)
+  workEnd                  String         @default("17:00")
+  attendanceMode            AttendanceMode @default(QR_AND_NETWORK)
+  weekendIsOvertime         Boolean        @default(true)
+  holidayIsOvertime         Boolean        @default(true)
+  qrSessionMinutes           Int            @default(10)
+  networkHeartbeatIntervalMinutes Int      @default(10)
+  networkStaleThresholdMinutes    Int      @default(30)
+  kioskResetSeconds          Int            @default(5)
+  crossOfficeAttendance      Boolean        @default(false)
+  updatedAt                 DateTime       @updatedAt
+
+  @@map("attendance_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  oldValue   String?
+  newValue   String?
+  reason     String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Rate limiting (persistent — serverless-safe, no in-memory state)
+// ---------------------------------------------------------------------------
+
+model RateLimitBucket {
+  key         String   @id // e.g. "attendance-id:203.0.113.4" or "admin-login:email"
+  count       Int      @default(0)
+  windowStart DateTime
+  lockedUntil DateTime?
+
+  @@map("rate_limit_buckets")
+}

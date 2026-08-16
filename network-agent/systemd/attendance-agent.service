@@ -1,0 +1,17 @@
+[Unit]
+Description=Digital Office Attendance - Network Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust these two paths for your install location and user.
+WorkingDirectory=/opt/attendance-network-agent
+ExecStart=/opt/attendance-network-agent/venv/bin/python /opt/attendance-network-agent/agent.py run
+Restart=always
+RestartSec=15
+User=attendance-agent
+EnvironmentFile=/opt/attendance-network-agent/.env
+
+[Install]
+WantedBy=multi-user.target
