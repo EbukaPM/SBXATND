@@ -45,7 +45,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={updateWithId} className="grid grid-cols-2 gap-4">
+            <form action={updateWithId} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="First name" name="firstName" defaultValue={employee.firstName} required />
               <Field label="Last name" name="lastName" defaultValue={employee.lastName} required />
               <Field label="Middle name" name="middleName" defaultValue={employee.middleName ?? ""} />

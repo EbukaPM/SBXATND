@@ -14,9 +14,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   const nav = visibleNavItems(user.role);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <AdminSidebar companyName={company.companyName} logoUrl={company.logoUrl} nav={nav} user={user} />
-      <main className="flex-1 overflow-x-hidden bg-muted/40 p-6 md:p-8">{children}</main>
+      <main className="flex-1 overflow-x-hidden bg-muted/40 p-4 pt-20 sm:p-6 md:p-8 md:pt-8">{children}</main>
     </div>
   );
 }

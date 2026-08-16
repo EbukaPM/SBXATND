@@ -12,7 +12,7 @@ export function AttendanceSettingsForm({ settings }: { settings: AttendanceSetti
   return (
     <form
       action={(fd) => startTransition(() => updateAttendanceSettingsAction(fd))}
-      className="grid grid-cols-2 gap-4 md:grid-cols-3"
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
     >
       <div>
         <label className="mb-1 block text-sm font-medium">Timezone</label>
