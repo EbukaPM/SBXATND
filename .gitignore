@@ -47,3 +47,7 @@ next-env.d.ts
 # network agent runtime state (contains the issued signing secret) and logs
 network-agent/agent_state.json
 network-agent/*.log
+
+# local-dev-only branding assets — production logos go through Vercel Blob
+# (Settings → Logo), never bundled into the app. See lib/storage/blob.ts.
+/public/branding/
