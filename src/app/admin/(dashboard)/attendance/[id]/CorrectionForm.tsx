@@ -20,7 +20,7 @@ export function CorrectionForm({ record }: { record: AttendanceRecord }) {
 
   return (
     <form action={formAction} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium">Clock In</label>
           <Input type="datetime-local" name="clockIn" defaultValue={toLocalInputValue(record.clockIn)} />

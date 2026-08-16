@@ -89,13 +89,13 @@ export function AttendanceKiosk({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-6 py-12">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-10 text-center shadow-sm">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-8 sm:px-6 sm:py-12">
+      <div className="w-full max-w-md rounded-2xl border bg-card p-6 text-center shadow-sm sm:p-10">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt={companyName} className="mx-auto mb-4 h-20 w-20 object-contain" />
+          <img src={logoUrl} alt={companyName} className="mx-auto mb-4 h-16 w-16 object-contain sm:h-20 sm:w-20" />
         ) : null}
-        <h1 className="text-2xl font-bold">{companyName}</h1>
+        <h1 className="text-xl font-bold sm:text-2xl">{companyName}</h1>
         <p className="mt-1 text-sm font-medium tracking-wide text-muted-foreground">OFFICE ATTENDANCE</p>
         {hasQrSession ? (
           <p className="mt-3 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
@@ -112,7 +112,7 @@ export function AttendanceKiosk({
             placeholder="Enter your Attendance ID"
             value={attendanceId}
             onChange={(e) => setAttendanceId(e.target.value)}
-            className="h-16 text-center text-xl tracking-widest uppercase"
+            className="h-14 text-center text-base tracking-wide uppercase sm:h-16 sm:text-xl sm:tracking-widest"
             maxLength={40}
           />
           <Button type="submit" size="xl" disabled={submitting || !attendanceId.trim()}>
@@ -127,8 +127,8 @@ export function AttendanceKiosk({
 function ResultScreen({ result }: { result: ClockResult }) {
   if (!result.ok) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-6 py-12 text-center">
-        <div className="w-full max-w-md rounded-2xl border bg-card p-10 shadow-sm">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-8 text-center sm:px-6 sm:py-12">
+        <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm sm:p-10">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl text-red-600">
             ✕
           </div>

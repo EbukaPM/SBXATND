@@ -25,12 +25,12 @@ export function BrandingForm({ company }: { company: CompanySettings }) {
         <label className="mb-1 block text-sm font-medium">Company name</label>
         <Input name="companyName" defaultValue={company.companyName} required />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <ColorField label="Primary" name="primaryColor" defaultValue={company.primaryColor} />
         <ColorField label="Secondary" name="secondaryColor" defaultValue={company.secondaryColor} />
         <ColorField label="Accent" name="accentColor" defaultValue={company.accentColor} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm font-medium">Address</label>
           <Input name="address" defaultValue={company.address ?? ""} />

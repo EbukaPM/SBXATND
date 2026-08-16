@@ -34,7 +34,7 @@ export function NewEmployeeForm({ offices, departments }: { offices: Office[]; d
 
   return (
     <form action={formAction} className="max-w-2xl space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="First name" name="firstName" required />
         <Field label="Last name" name="lastName" required />
         <Field label="Middle name" name="middleName" />

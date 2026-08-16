@@ -14,11 +14,14 @@ export default async function Home() {
       ) : null}
       <h1 className="text-3xl font-bold">{company.companyName}</h1>
       <p className="text-muted-foreground">Digital Office Attendance System</p>
-      <div className="flex gap-4">
-        <Link href="/attendance" className="rounded-md bg-primary px-6 py-3 font-medium text-primary-foreground">
+      <div className="flex w-full max-w-xs flex-col gap-3 sm:max-w-none sm:w-auto sm:flex-row sm:gap-4">
+        <Link
+          href="/attendance"
+          className="rounded-md bg-primary px-6 py-3 text-center font-medium text-primary-foreground"
+        >
           Open Attendance Kiosk
         </Link>
-        <Link href="/admin/login" className="rounded-md border px-6 py-3 font-medium">
+        <Link href="/admin/login" className="rounded-md border px-6 py-3 text-center font-medium">
           Admin Login
         </Link>
       </div>
