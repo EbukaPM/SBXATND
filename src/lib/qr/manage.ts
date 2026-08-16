@@ -79,8 +79,18 @@ export async function generateDailyQr(params: GenerateQrParams): Promise<Generat
     ipAddress: actorIp ?? null,
   });
 
-  const withArtifacts = await renderAndStoreQrArtifacts(qrCode, rawToken);
-  return { qrCode: withArtifacts, rawToken };
+  // The QR code itself (the security-critical part employees' clock-ins depend on) is
+  // already durably created above. Rendering/uploading the printable PDF/PNG is a
+  // supplementary convenience — if object storage is briefly unavailable, generation
+  // still succeeds with pdfUrl/pngUrl left null; the admin UI already handles that
+  // (no broken download links) and can retry via Regenerate.
+  try {
+    const withArtifacts = await renderAndStoreQrArtifacts(qrCode, rawToken);
+    return { qrCode: withArtifacts, rawToken };
+  } catch (err) {
+    console.error("QR artifact rendering/upload failed; QR code is still valid without PDF/PNG.", err);
+    return { qrCode, rawToken };
+  }
 }
 
 /** Renders the PDF/PNG once at generation time and stores them — see the pdfUrl/pngUrl schema comment for why. */
