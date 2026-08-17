@@ -30,5 +30,5 @@ export function generateQrToken(): GeneratedQrToken {
 }
 
 export function buildQrUrl(appUrl: string, rawToken: string): string {
-  return `${appUrl.replace(/\/$/, "")}/attendance/qr/${rawToken}`;
+  return `${appUrl.replace(/\/$/, "")}/register/qr/${rawToken}`;
 }

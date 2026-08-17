@@ -51,7 +51,7 @@ export function AttendanceSettingsForm({ settings }: { settings: AttendanceSetti
         <Input type="number" name="networkStaleThresholdMinutes" defaultValue={settings.networkStaleThresholdMinutes} min={1} max={1440} />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">Kiosk reset (seconds)</label>
+        <label className="mb-1 block text-sm font-medium">Register reset (seconds)</label>
         <Input type="number" name="kioskResetSeconds" defaultValue={settings.kioskResetSeconds} min={2} max={60} />
       </div>
 

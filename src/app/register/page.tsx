@@ -3,11 +3,11 @@ import { getCompanySettings } from "@/lib/company/settings";
 import { getAttendanceSettings } from "@/lib/attendance/settings";
 import { getActiveQrSession } from "@/lib/qr/session";
 import { QR_SESSION_COOKIE } from "@/lib/attendance/clockHandler";
-import { AttendanceKiosk } from "@/components/attendance/AttendanceKiosk";
+import { AttendanceRegister } from "@/components/attendance/AttendanceRegister";
 
 export const dynamic = "force-dynamic";
 
-export default async function AttendancePage({
+export default async function RegisterPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string; qr?: string }>;
@@ -50,10 +50,10 @@ export default async function AttendancePage({
   }
 
   return (
-    <AttendanceKiosk
+    <AttendanceRegister
       companyName={company.companyName}
       logoUrl={company.logoUrl}
-      kioskResetSeconds={settings.kioskResetSeconds}
+      resetSeconds={settings.kioskResetSeconds}
       initialError={error ?? null}
       hasQrSession={hasValidQrSession}
     />

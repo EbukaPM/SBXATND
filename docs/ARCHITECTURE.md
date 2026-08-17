@@ -48,14 +48,15 @@ with its own setup docs.
 
 ## Request flow: employee clock-in
 
-1. Employee opens `/attendance` (direct link) or scans the office QR, which redirects
-   through `/attendance/qr/[token]` first.
+1. Employee opens `/register` (direct link) or scans the office QR, which redirects
+   through `/register/qr/[token]` first. This is a deliberately different URL from
+   `/admin/login` — staff never need to see or guess an admin path, and vice versa.
 2. If the deployment's attendance mode requires QR (`QR_AND_NETWORK` or `QR_ONLY`), the QR
    landing route validates the token server-side (`lib/qr/session.ts`), opens a short-lived
-   `QrAttendanceSession` bound to an httpOnly cookie, and redirects into the kiosk. Visiting
-   `/attendance` directly without that cookie shows "QR verification required" instead of a
-   working form — there's no way to skip the check by hitting a different URL.
-3. Employee types their Attendance ID and submits. The kiosk POSTs `{ attendanceId }` to
+   `QrAttendanceSession` bound to an httpOnly cookie, and redirects into the register screen.
+   Visiting `/register` directly without that cookie shows "QR verification required" instead
+   of a working form — there's no way to skip the check by hitting a different URL.
+3. Employee types their Attendance ID and submits. The register screen POSTs `{ attendanceId }` to
    `/api/attendance/clock-in` (or `/clock-out` — both routes call the same handler, see below).
 4. `lib/attendance/clockHandler.ts` resolves the request's real source IP via
    `getClientIp()` (never a client-supplied value), reads the QR session token from the
@@ -93,7 +94,7 @@ which requires a reason and is fully audited.
 ## Why Server Actions *and* Route Handlers
 
 - **Route Handlers** (`app/api/**/route.ts`) are used for anything a non-browser client calls:
-  the kiosk's fetch requests, the Network Agent's heartbeat/registration, report downloads,
+  the register screen's fetch requests, the Network Agent's heartbeat/registration, report downloads,
   and the `/api/cron/*` targets that Netlify's Scheduled Functions trigger.
 - **Server Actions** (`lib/actions/**`) back every admin form (employees, offices, QR,
   settings, holidays, admins). They get CSRF protection and same-origin enforcement from the
@@ -103,8 +104,8 @@ which requires a reason and is fully audited.
 ## Rendering strategy
 
 Admin pages are server components that query Prisma directly (`export const dynamic =
-"force-dynamic"` where the data must always be fresh — dashboards, lists). The public kiosk
-and QR landing route are also dynamic, since attendance decisions must never be served from
+"force-dynamic"` where the data must always be fresh — dashboards, lists). The public register
+screen and QR landing route are also dynamic, since attendance decisions must never be served from
 a cache. The root layout caches company branding for 60 seconds (`revalidate = 60`) since a
 brand color change doesn't need to be instant.
 

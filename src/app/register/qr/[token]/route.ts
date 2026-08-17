@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 /**
  * Landing point for a scanned QR code. Validates the token, opens a short-lived
  * QR session bound to this device (httpOnly cookie), and redirects into the
- * normal kiosk UI. The employee still must be on the office network (checked
+ * normal register screen. The employee still must be on the office network (checked
  * again at clock-in time) and still has to enter their Attendance ID — the
  * scan alone never records attendance.
  */
@@ -20,14 +20,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const rate = await checkRateLimit(sourceIp ?? "unknown", RATE_LIMITS.qrLookup);
   if (!rate.allowed) {
-    return NextResponse.redirect(new URL("/attendance?error=rate_limited", request.url));
+    return NextResponse.redirect(new URL("/register?error=rate_limited", request.url));
   }
 
   const settings = await getAttendanceSettings();
   const validation = await validateQrToken(token, settings.timezone);
 
   if (!validation.ok) {
-    return NextResponse.redirect(new URL(`/attendance?error=qr_${validation.reason.toLowerCase()}`, request.url));
+    return NextResponse.redirect(new URL(`/register?error=qr_${validation.reason.toLowerCase()}`, request.url));
   }
 
   const session = await startQrSession({
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     userAgent: request.headers.get("user-agent"),
   });
 
-  const response = NextResponse.redirect(new URL("/attendance?qr=1", request.url));
+  const response = NextResponse.redirect(new URL("/register?qr=1", request.url));
   response.cookies.set(QR_SESSION_COOKIE, session.sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

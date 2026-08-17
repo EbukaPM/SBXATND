@@ -32,11 +32,11 @@ describe("hashQrToken", () => {
 describe("buildQrUrl", () => {
   it("embeds the raw token in the URL path", () => {
     const url = buildQrUrl("https://attendance.example.com", "abc123");
-    expect(url).toBe("https://attendance.example.com/attendance/qr/abc123");
+    expect(url).toBe("https://attendance.example.com/register/qr/abc123");
   });
 
   it("handles a trailing slash on the app URL", () => {
     const url = buildQrUrl("https://attendance.example.com/", "abc123");
-    expect(url).toBe("https://attendance.example.com/attendance/qr/abc123");
+    expect(url).toBe("https://attendance.example.com/register/qr/abc123");
   });
 });

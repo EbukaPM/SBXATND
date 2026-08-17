@@ -20,8 +20,8 @@ SEED_ADMIN_EMAIL=admin@example.com SEED_ADMIN_PASSWORD='change-me-now-1234' npm 
 npm run dev
 ```
 
-Open http://localhost:3000/attendance for the kiosk, http://localhost:3000/admin/login for
-the admin dashboard.
+Open http://localhost:3000/register for the staff attendance register, http://localhost:3000/admin/login
+for the admin dashboard — deliberately separate URLs (see docs/ARCHITECTURE.md).
 
 You need a real PostgreSQL database for local dev — see [docs/DATABASE.md](docs/DATABASE.md)
 for options (Neon/Supabase free tier is the fastest path if you don't want to install
@@ -45,7 +45,7 @@ Postgres locally).
 ```
 src/
   app/
-    attendance/            kiosk UI + QR scan landing route
+    register/               staff attendance register UI + QR scan landing route
     admin/                 admin dashboard (route-grouped: (dashboard) is auth-protected)
     api/                   route handlers (attendance, network, qr, reports, cron, blob serving)
   components/               ui/ (design system primitives), attendance/, branding/

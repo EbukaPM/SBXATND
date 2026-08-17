@@ -49,9 +49,9 @@ cron job having run recently.
 
 ```
 Employee scans QR
-  → GET /attendance/qr/[token]     (lib/qr/session.ts#validateQrToken)
+  → GET /register/qr/[token]       (lib/qr/session.ts#validateQrToken)
   → creates a QrAttendanceSession (10 min default, configurable), bound to an httpOnly cookie
-  → redirect to /attendance
+  → redirect to /register
 Employee enters their Attendance ID
   → POST /api/attendance/clock-in  (reads the QR session from the cookie, not from client JS)
   → lib/attendance/engine.ts#recordAttendance re-validates the session, checks office match,

@@ -110,5 +110,5 @@ export async function updateAttendanceSettingsAction(formData: FormData): Promis
   });
 
   revalidatePath("/admin/settings");
-  revalidatePath("/attendance");
+  revalidatePath("/register");
 }

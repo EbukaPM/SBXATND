@@ -33,7 +33,7 @@ export async function handleClockRequest(request: NextRequest): Promise<NextResp
   }
 
   // The QR session token normally arrives as an httpOnly cookie set when the
-  // employee's phone opened the /attendance/qr/[token] link — it never has to
+  // employee's phone opened the /register/qr/[token] link — it never has to
   // pass through client-side JS. A body field is also accepted for API clients.
   const cookieToken = request.cookies.get(QR_SESSION_COOKIE)?.value ?? null;
 

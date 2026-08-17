@@ -4,10 +4,10 @@ import { useState, useRef, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface AttendanceKioskProps {
+interface AttendanceRegisterProps {
   companyName: string;
   logoUrl: string | null;
-  kioskResetSeconds: number;
+  resetSeconds: number;
   initialError?: string | null;
   hasQrSession: boolean;
 }
@@ -33,13 +33,13 @@ const ERROR_MESSAGES: Record<string, string> = {
   qr_not_yet_active: "This QR code is not active yet.",
 };
 
-export function AttendanceKiosk({
+export function AttendanceRegister({
   companyName,
   logoUrl,
-  kioskResetSeconds,
+  resetSeconds,
   initialError,
   hasQrSession,
-}: AttendanceKioskProps) {
+}: AttendanceRegisterProps) {
   const [attendanceId, setAttendanceId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<ClockResult | null>(
@@ -56,9 +56,9 @@ export function AttendanceKiosk({
     const t = setTimeout(() => {
       setResult(null);
       setAttendanceId("");
-    }, kioskResetSeconds * 1000);
+    }, resetSeconds * 1000);
     return () => clearTimeout(t);
-  }, [result, kioskResetSeconds]);
+  }, [result, resetSeconds]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -142,8 +142,8 @@ function ResultScreen({ result }: { result: ClockResult }) {
   const greeting = result.action === "CLOCK_IN" ? "Good day" : "Goodbye";
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-6 py-12 text-center">
-      <div className="w-full max-w-md rounded-2xl border bg-card p-10 shadow-sm">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted px-4 py-8 text-center sm:px-6 sm:py-12">
+      <div className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-sm sm:p-10">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl text-green-600">
           ✓
         </div>
