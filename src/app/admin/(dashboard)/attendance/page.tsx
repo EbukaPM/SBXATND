@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatInTimeZone } from "date-fns-tz";
+import { PageHeader } from "@/components/admin/PageHeader";
 import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -56,9 +57,11 @@ export default async function AttendanceListPage({
   ]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Attendance</h1>
-
+    <>
+      <PageHeader>
+        <h1 className="text-2xl font-bold">Attendance</h1>
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <form className="flex flex-wrap gap-2">
         <Input type="date" name="from" defaultValue={from} className="w-40" />
         <Input type="date" name="to" defaultValue={to} className="w-40" />
@@ -175,6 +178,7 @@ export default async function AttendanceListPage({
           ) : null}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

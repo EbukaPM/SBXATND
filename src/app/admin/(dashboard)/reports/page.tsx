@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatInTimeZone } from "date-fns-tz";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,11 @@ export default async function ReportsPage() {
   const currentMonth = formatInTimeZone(new Date(), "Africa/Lagos", "yyyy-MM");
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Reports</h1>
-
+    <>
+      <PageHeader>
+        <h1 className="text-2xl font-bold">Reports</h1>
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <Card>
         <CardHeader>
           <CardTitle>Daily attendance report</CardTitle>
@@ -77,7 +80,8 @@ export default async function ReportsPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
 

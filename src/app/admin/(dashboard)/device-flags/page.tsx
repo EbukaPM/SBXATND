@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { reviewDeviceFlagAction } from "@/lib/actions/deviceFlags";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,8 @@ export default async function DeviceFlagsPage({
   });
 
   return (
-    <div className="space-y-6">
-      <div>
+    <>
+      <PageHeader>
         <h1 className="text-2xl font-bold">Device Flags</h1>
         <p className="text-sm text-muted-foreground">
           Raised when the same device (phone/laptop, tracked by a persistent browser cookie — never by
@@ -34,8 +35,8 @@ export default async function DeviceFlagsPage({
           employee than it was last seen with. Clock-ins are never blocked for this — review each flag and
           confirm it&apos;s expected (e.g. a shared device) or a genuine concern.
         </p>
-      </div>
-
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <div className="flex gap-2 text-sm">
         <a
           href="/admin/device-flags"
@@ -101,6 +102,7 @@ export default async function DeviceFlagsPage({
           </Card>
         ) : null}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

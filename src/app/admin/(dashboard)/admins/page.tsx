@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
 import { NewAdminForm } from "./NewAdminForm";
 import { AdminRow } from "./AdminRow";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +14,11 @@ export default async function AdminsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Administrators</h1>
-
+    <>
+      <PageHeader>
+        <h1 className="text-2xl font-bold">Administrators</h1>
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <Card>
         <CardHeader>
           <CardTitle>Add administrator</CardTitle>
@@ -44,6 +47,7 @@ export default async function AdminsPage() {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

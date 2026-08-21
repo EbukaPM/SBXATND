@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CorrectionForm } from "./CorrectionForm";
 import { reviewDeviceFlagAction } from "@/lib/actions/deviceFlags";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +22,14 @@ export default async function AttendanceCorrectionPage({ params }: { params: Pro
   if (!record) notFound();
 
   return (
-    <div className="space-y-6">
-      <div>
+    <>
+      <PageHeader>
         <h1 className="text-2xl font-bold">
           {record.employee.firstName} {record.employee.lastName} — {record.attendanceDate.toISOString().slice(0, 10)}
         </h1>
         <p className="text-sm text-muted-foreground">{record.office.name}</p>
-      </div>
-
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       {record.deviceFlags.length > 0 ? (
         <Card className="border-red-300 bg-red-50/60">
           <CardHeader>
@@ -106,6 +107,7 @@ export default async function AttendanceCorrectionPage({ params }: { params: Pro
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

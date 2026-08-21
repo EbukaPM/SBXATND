@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { Prisma } from "@prisma/client";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,11 @@ export default async function AuditLogPage({
   ]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Audit Log</h1>
-
+    <>
+      <PageHeader>
+        <h1 className="text-2xl font-bold">Audit Log</h1>
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <form className="flex flex-wrap gap-2">
         <Input name="action" defaultValue={action} placeholder="Filter by action…" className="w-56" />
         <Input name="resource" defaultValue={resource} placeholder="Filter by resource…" className="w-56" />
@@ -80,6 +83,7 @@ export default async function AuditLogPage({
       <p className="text-sm text-muted-foreground">
         {total} total entries · page {pageNum}
       </p>
-    </div>
+      </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db/prisma";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/admin/PageHeader";
 import type { EmploymentStatus, Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -39,14 +40,16 @@ export default async function EmployeesPage({
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Employees</h1>
-        <Button asChild>
-          <Link href="/admin/employees/new">Add Employee</Link>
-        </Button>
-      </div>
-
+    <>
+      <PageHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold">Employees</h1>
+          <Button asChild>
+            <Link href="/admin/employees/new">Add Employee</Link>
+          </Button>
+        </div>
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <form className="flex flex-wrap gap-2">
         <Input name="q" defaultValue={q} placeholder="Search name, number, email…" className="w-64" />
         <select name="status" defaultValue={status ?? ""} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
@@ -104,6 +107,7 @@ export default async function EmployeesPage({
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createHolidayAction, deleteHolidayAction } from "@/lib/actions/holidays";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,14 @@ export default async function HolidaysPage() {
   const holidays = await prisma.holiday.findMany({ orderBy: { date: "desc" } });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Holidays</h1>
-      <p className="text-sm text-muted-foreground">
-        Attendance on a listed holiday is recorded as HOLIDAY_OVERTIME (configurable in Settings).
-      </p>
-
+    <>
+      <PageHeader>
+        <h1 className="text-2xl font-bold">Holidays</h1>
+        <p className="text-sm text-muted-foreground">
+          Attendance on a listed holiday is recorded as HOLIDAY_OVERTIME (configurable in Settings).
+        </p>
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <Card>
         <CardHeader>
           <CardTitle>Add holiday</CardTitle>
@@ -76,6 +79,7 @@ export default async function HolidaysPage() {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { updateEmployeeAction } from "@/lib/actions/employees";
 import { RegenerateIdButton } from "./RegenerateIdButton";
 import { StatusButtons } from "./StatusButtons";
@@ -29,16 +30,16 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   const updateWithId = updateEmployeeAction.bind(null, employee.id);
 
   return (
-    <div className="space-y-6">
-      <div>
+    <>
+      <PageHeader>
         <h1 className="text-2xl font-bold">
           {employee.firstName} {employee.lastName}
         </h1>
         <p className="text-sm text-muted-foreground">
           {employee.employeeNumber} · {employee.office.name}
         </p>
-      </div>
-
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -160,7 +161,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           </table>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
 

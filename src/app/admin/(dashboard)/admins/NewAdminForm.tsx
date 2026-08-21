@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createAdminAction, type CreateAdminState } from "@/lib/actions/admins";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 
 const initialState: CreateAdminState = {};
@@ -22,7 +23,7 @@ export function NewAdminForm() {
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">Temporary password</label>
-        <Input name="password" type="password" required minLength={10} className="h-9 w-48" />
+        <PasswordInput name="password" required minLength={10} className="h-9 w-48" />
       </div>
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">Role</label>

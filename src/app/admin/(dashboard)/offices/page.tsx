@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createOfficeAction } from "@/lib/actions/offices";
 import { CreateNetworkForm, NetworkRow } from "./NetworkAgentPanel";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,8 @@ export default async function OfficesPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
+    <>
+      <PageHeader>
         <h1 className="text-2xl font-bold">Offices &amp; Network</h1>
         <p className="text-sm text-muted-foreground">
           Each office needs at least one verified network for network-based attendance checks to pass. Two ways to
@@ -24,8 +25,8 @@ export default async function OfficesPage() {
           <strong>Authorize This Network Now</strong> below while connected to office Wi-Fi — no dedicated machine
           needed, just re-click it whenever Starlink&apos;s IP changes.
         </p>
-      </div>
-
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <Card>
         <CardHeader>
           <CardTitle>Add office</CardTitle>
@@ -80,6 +81,7 @@ export default async function OfficesPage() {
         ))}
         {offices.length === 0 ? <p className="text-sm text-muted-foreground">No offices yet.</p> : null}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

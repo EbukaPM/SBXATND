@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { generateQrAction, deactivateQrAction } from "@/lib/actions/qr";
 import { getAttendanceSettings } from "@/lib/attendance/settings";
 import { formatInTimeZone } from "date-fns-tz";
+import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,8 @@ export default async function QrPage() {
   const todayStr = formatInTimeZone(new Date(), settings.timezone, "yyyy-MM-dd");
 
   return (
-    <div className="space-y-6">
-      <div>
+    <>
+      <PageHeader>
         <h1 className="text-2xl font-bold">QR Codes</h1>
         <p className="text-sm text-muted-foreground">
           Attendance mode is <strong>{settings.attendanceMode.replace(/_/g, " ")}</strong>.{" "}
@@ -40,8 +41,8 @@ export default async function QrPage() {
             </span>
           ) : null}
         </p>
-      </div>
-
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <Card>
         <CardHeader>
           <CardTitle>Generate QR</CardTitle>
@@ -127,6 +128,7 @@ export default async function QrPage() {
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -14,9 +14,14 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   const nav = visibleNavItems(user.role);
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="flex h-screen flex-col overflow-hidden md:flex-row">
       <AdminSidebar companyName={company.companyName} logoUrl={company.logoUrl} nav={nav} user={user} />
-      <main className="flex-1 overflow-x-hidden bg-muted/40 p-4 pt-20 sm:p-6 md:p-8 md:pt-8">{children}</main>
+      {/* Only this scrolls — the sidebar (desktop) and top bar (mobile) stay put. */}
+      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-muted/40">
+        {/* Clears the mobile fixed top bar; scrolls away with content, unlike the sticky page header below it. */}
+        <div className="h-14 md:hidden" />
+        {children}
+      </main>
     </div>
   );
 }

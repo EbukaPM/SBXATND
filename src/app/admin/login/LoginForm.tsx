@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { loginAction, type LoginState } from "@/lib/actions/auth";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 
 const initialState: LoginState = {};
@@ -22,7 +23,7 @@ export function LoginForm() {
         <label htmlFor="password" className="mb-1 block text-sm font-medium">
           Password
         </label>
-        <Input id="password" name="password" type="password" required autoComplete="current-password" />
+        <PasswordInput id="password" name="password" required autoComplete="current-password" />
       </div>
       {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
       <Button type="submit" disabled={pending} className="mt-2">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/admin/PageHeader";
 import { getTodaySummary, getWeeklyTrend } from "@/lib/dashboard/summary";
 import { WeeklyTrendChart } from "./WeeklyTrendChart";
 import { formatInTimeZone } from "date-fns-tz";
@@ -34,21 +35,23 @@ export default async function AdminDashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            {formatInTimeZone(now, settings.timezone, "EEEE, d MMMM yyyy — h:mm a")} ({settings.timezone})
-          </p>
+    <>
+      <PageHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              {formatInTimeZone(now, settings.timezone, "EEEE, d MMMM yyyy — h:mm a")} ({settings.timezone})
+            </p>
+          </div>
+          <div className="flex gap-2 text-sm">
+            <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
+              Mode: {settings.attendanceMode.replace(/_/g, " ")}
+            </span>
+          </div>
         </div>
-        <div className="flex gap-2 text-sm">
-          <span className="rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
-            Mode: {settings.attendanceMode.replace(/_/g, " ")}
-          </span>
-        </div>
-      </div>
-
+      </PageHeader>
+      <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       {staleNetworks.length > 0 ? (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
           ⚠ {staleNetworks.length} office network{staleNetworks.length > 1 ? "s" : ""} have not sent a heartbeat
@@ -89,6 +92,7 @@ export default async function AdminDashboardPage() {
           <WeeklyTrendChart data={trend} />
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
