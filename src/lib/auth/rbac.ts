@@ -8,6 +8,7 @@ import type { AdminRole } from "@prisma/client";
 export const PERMISSIONS = {
   employees: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"], manage: ["SUPER_ADMIN", "ADMIN", "HR"] },
   attendance: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"], manage: ["SUPER_ADMIN", "ADMIN", "HR"] },
+  deviceFlags: { view: ["SUPER_ADMIN", "ADMIN", "HR"], manage: ["SUPER_ADMIN", "ADMIN", "HR"] },
   reports: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"] },
   qr: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"], manage: ["SUPER_ADMIN", "ADMIN"] },
   offices: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"], manage: ["SUPER_ADMIN", "ADMIN"] },

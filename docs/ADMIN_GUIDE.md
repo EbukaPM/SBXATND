@@ -46,6 +46,11 @@ account or a developer can reset it directly in the database — there's no self
 - **QR Codes**: each day needs a fresh QR if you're in `QR_AND_NETWORK`/`QR_ONLY` mode —
   generate it each morning (or ahead of time by picking a future date), or deactivate one if
   it's been compromised (e.g. posted publicly online by mistake).
+- **Device Flags**: shows whenever a phone/laptop clocks in as a different employee than it
+  was last used by — a possible sign someone clocked in for an absent colleague. It never
+  blocks the clock-in itself (a shared device, like a reception tablet, is normal and will
+  flag every time it switches employees). Open each flag, confirm it's expected or worth
+  following up on, optionally leave a note, and mark it reviewed.
 - **Reports**: Daily, Monthly, or per-Employee, exportable as CSV, Excel, or a branded PDF.
 - **Holidays**: add public holidays; attendance on those days is automatically marked as
   holiday overtime.

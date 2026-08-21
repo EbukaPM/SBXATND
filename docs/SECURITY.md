@@ -81,6 +81,25 @@ stored only as an HMAC hash, and validity is re-checked live against the office 
 calendar date on every scan/session use — a stale or forwarded QR link is rejected the moment
 the calendar day rolls over, independent of any cron job.
 
+## Device flagging (buddy-punching detection)
+
+Every device on office Wi-Fi shares one public IP via NAT, so IP address cannot distinguish
+one employee's phone from another's — that's not a bug, it's what makes the office-network
+check in the previous section work at all. Catching "one device clocking in as different
+employees" therefore needs a device-level signal instead of a network one:
+`lib/security/deviceId.ts` assigns a random, persistent, httpOnly cookie
+(`attendance_device_id`) to each browser on its first visit to `/register` (set in
+`proxy.ts`, 2-year expiry). This is a plain random ID, not a fingerprint — no canvas/font
+probing — and like any client-side identifier it's inherently defeatable by clearing cookies
+or switching browsers; it is a practical deterrent and review signal, not a hard guarantee.
+
+At clock-in, `lib/attendance/deviceFlags.ts#flagDeviceReuseIfNeeded` checks whether this
+device's most recent clock-in belongs to a *different* employee than the one now clocking
+in. If so, it records an `AttendanceDeviceFlag` — it never blocks the clock-in itself, since
+a legitimate shared device (a reception tablet kept as a fallback) would otherwise
+false-positive on every single use. Flags surface on the dashboard and at
+Admin → Device Flags for a human to confirm as expected or investigate.
+
 ## Rate limiting
 
 `lib/security/rateLimit.ts` is backed by a Postgres table (`RateLimitBucket`), not an
@@ -151,7 +170,9 @@ per the brief's privacy requirements.
 - `tests/integration/attendance.test.ts` (needs `DATABASE_URL`) — network-denied-when-
   unconfigured, invalid-ID generic rejection, authorized-vs-unauthorized IP (the
   "employee at home with a screenshot" scenario), full clock-in→clock-out state machine,
-  duplicate clock-in prevention including a genuine concurrent-request race test.
+  duplicate clock-in prevention including a genuine concurrent-request race test, device-flag
+  creation on cross-employee device reuse, no flag for an employee's own repeated device use,
+  no flag when no device ID is supplied.
 - `tests/integration/qr.test.ts` — today's QR valid, yesterday's QR rejected, deactivated QR
   rejected, regeneration invalidates the previous code, unknown token rejected.
 - `tests/integration/networkAgent.test.ts` — wrong registration token rejected, token reuse

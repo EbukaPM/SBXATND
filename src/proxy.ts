@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { DEVICE_ID_COOKIE, DEVICE_ID_COOKIE_OPTIONS, generateDeviceId } from "@/lib/security/deviceId";
 
 const ADMIN_SESSION_COOKIE = "attendance_admin_session";
 
@@ -24,6 +25,13 @@ export function proxy(request: NextRequest) {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(self), geolocation=(), microphone=()");
+
+  // Assign the persistent device-tracking cookie on first visit to the register
+  // flow, so it's already present by the time the employee submits a clock-in.
+  if (pathname.startsWith("/register") && !request.cookies.has(DEVICE_ID_COOKIE)) {
+    response.cookies.set(DEVICE_ID_COOKIE, generateDeviceId(), DEVICE_ID_COOKIE_OPTIONS);
+  }
+
   return response;
 }
 

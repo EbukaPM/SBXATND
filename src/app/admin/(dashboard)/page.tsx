@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTodaySummary, getWeeklyTrend } from "@/lib/dashboard/summary";
 import { WeeklyTrendChart } from "./WeeklyTrendChart";
@@ -19,10 +20,11 @@ const STAT_LABELS: { key: keyof Awaited<ReturnType<typeof getTodaySummary>>["sum
 ];
 
 export default async function AdminDashboardPage() {
-  const [{ settings, summary }, trend, networks] = await Promise.all([
+  const [{ settings, summary }, trend, networks, unreviewedDeviceFlags] = await Promise.all([
     getTodaySummary(),
     getWeeklyTrend(),
     prisma.officeNetwork.findMany({ where: { status: { not: "DISABLED" } } }),
+    prisma.attendanceDeviceFlag.count({ where: { reviewed: false } }),
   ]);
 
   const now = new Date();
@@ -52,6 +54,16 @@ export default async function AdminDashboardPage() {
           ⚠ {staleNetworks.length} office network{staleNetworks.length > 1 ? "s" : ""} have not sent a heartbeat
           recently and may be treated as STALE. Check Offices &amp; Network.
         </div>
+      ) : null}
+
+      {unreviewedDeviceFlags > 0 ? (
+        <Link
+          href="/admin/device-flags"
+          className="block rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800 hover:bg-amber-100"
+        >
+          ⚠ {unreviewedDeviceFlags} device flag{unreviewedDeviceFlags > 1 ? "s" : ""} need review — a device
+          clocked in as an employee it wasn&apos;t previously used by. Review now →
+        </Link>
       ) : null}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">

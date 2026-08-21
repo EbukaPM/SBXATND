@@ -36,6 +36,7 @@ describeIfDb("recordAttendance — integration", () => {
   });
 
   afterAll(async () => {
+    await prisma.attendanceDeviceFlag.deleteMany({ where: { attendanceRecord: { officeId } } });
     await prisma.attendanceRecord.deleteMany({ where: { officeId } });
     await prisma.employee.deleteMany({ where: { officeId } });
     await prisma.officeNetwork.deleteMany({ where: { officeId } });
@@ -44,6 +45,7 @@ describeIfDb("recordAttendance — integration", () => {
   });
 
   beforeEach(async () => {
+    await prisma.attendanceDeviceFlag.deleteMany({ where: { attendanceRecord: { officeId } } });
     await prisma.attendanceRecord.deleteMany({ where: { officeId } });
     await prisma.rateLimitBucket.deleteMany();
   });
@@ -151,6 +153,71 @@ describeIfDb("recordAttendance — integration", () => {
         where: { employeeId: (await prisma.employee.findFirst({ where: { officeId }, orderBy: { createdAt: "desc" } }))!.id },
       });
       expect(records).toBe(1);
+    });
+
+    it("flags a device clocking in as a different employee than it was last seen with", async () => {
+      const a = await makeEmployee();
+      const b = await makeEmployee();
+      const sharedDeviceId = "device-shared-1";
+
+      const firstResult = await recordAttendance({
+        attendanceIdRaw: a.attendanceId,
+        sourceIp: "102.89.0.1",
+        userAgent: "vitest",
+        deviceId: sharedDeviceId,
+      });
+      expect(firstResult.ok).toBe(true);
+
+      const secondResult = await recordAttendance({
+        attendanceIdRaw: b.attendanceId,
+        sourceIp: "102.89.0.1",
+        userAgent: "vitest",
+        deviceId: sharedDeviceId,
+      });
+      expect(secondResult.ok).toBe(true); // never blocked, only flagged
+
+      const flags = await prisma.attendanceDeviceFlag.findMany({ where: { deviceId: sharedDeviceId } });
+      expect(flags).toHaveLength(1);
+      expect(flags[0]!.employeeId).toBe(b.employee.id);
+      expect(flags[0]!.previousEmployeeId).toBe(a.employee.id);
+      expect(flags[0]!.reviewed).toBe(false);
+    });
+
+    it("does not flag the same employee reusing their own device", async () => {
+      const a = await makeEmployee();
+      const deviceId = "device-own-1";
+
+      const clockIn = await recordAttendance({
+        attendanceIdRaw: a.attendanceId,
+        sourceIp: "102.89.0.1",
+        userAgent: "vitest",
+        deviceId,
+      });
+      expect(clockIn.ok).toBe(true);
+
+      const clockOut = await recordAttendance({
+        attendanceIdRaw: a.attendanceId,
+        sourceIp: "102.89.0.1",
+        userAgent: "vitest",
+        deviceId,
+      });
+      expect(clockOut.ok).toBe(true);
+
+      const flags = await prisma.attendanceDeviceFlag.findMany({ where: { deviceId } });
+      expect(flags).toHaveLength(0);
+    });
+
+    it("does not flag when no deviceId is supplied", async () => {
+      const a = await makeEmployee();
+      const b = await makeEmployee();
+
+      await recordAttendance({ attendanceIdRaw: a.attendanceId, sourceIp: "102.89.0.1", userAgent: "vitest" });
+      await recordAttendance({ attendanceIdRaw: b.attendanceId, sourceIp: "102.89.0.1", userAgent: "vitest" });
+
+      const flags = await prisma.attendanceDeviceFlag.count({
+        where: { OR: [{ employeeId: a.employee.id }, { employeeId: b.employee.id }] },
+      });
+      expect(flags).toBe(0);
     });
   });
 });

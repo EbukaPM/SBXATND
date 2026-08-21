@@ -6,6 +6,7 @@ import { verifyOfficeNetwork } from "@/lib/network/verifyOfficeNetwork";
 import { hashAttendanceId, normalizeAttendanceId } from "@/lib/security/attendanceId";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rateLimit";
 import { getActiveQrSession, consumeQrSession } from "@/lib/qr/session";
+import { flagDeviceReuseIfNeeded } from "./deviceFlags";
 import type { AttendanceRecord, VerificationMethod } from "@prisma/client";
 
 export type AttendanceDenialReason =
@@ -37,6 +38,8 @@ export interface RecordAttendanceInput {
   sourceIp: string;
   userAgent: string | null;
   qrSessionToken?: string | null;
+  /** Persistent per-browser cookie ID, not a network identity — see lib/security/deviceId.ts. */
+  deviceId?: string | null;
 }
 
 /**
@@ -130,11 +133,17 @@ export async function recordAttendance(input: RecordAttendanceInput): Promise<At
           clockInUserAgent: input.userAgent,
           clockInNetworkId: officeNetworkId,
           clockInQrId: qrCodeId,
+          clockInDeviceId: input.deviceId ?? null,
           verificationMethod,
         },
       });
 
       if (qrSessionId) await consumeQrSession(qrSessionId);
+      await flagDeviceReuseIfNeeded({
+        deviceId: input.deviceId ?? null,
+        employeeId: employee.id,
+        attendanceRecordId: record.id,
+      });
       return { ok: true, action: "CLOCK_IN", record, firstName: employee.firstName };
     }
 
@@ -147,6 +156,7 @@ export async function recordAttendance(input: RecordAttendanceInput): Promise<At
         clockOutUserAgent: input.userAgent,
         clockOutNetworkId: officeNetworkId,
         clockOutQrId: qrCodeId,
+        clockOutDeviceId: input.deviceId ?? null,
         totalMinutesWorked,
       },
     });

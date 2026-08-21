@@ -44,6 +44,7 @@ model User {
   qrCodesGenerated    AttendanceQrCode[] @relation("QrGeneratedBy")
   qrCodesDeactivated  AttendanceQrCode[] @relation("QrDeactivatedBy")
   attendanceCorrections AttendanceCorrection[]
+  deviceFlagsReviewed AttendanceDeviceFlag[]
 
   @@index([email])
   @@map("users")
@@ -131,6 +132,8 @@ model Employee {
 
   attendanceRecords AttendanceRecord[]
   attendanceIdHistory AttendanceIdHistory[]
+  deviceFlagsAsCurrent  AttendanceDeviceFlag[] @relation("DeviceFlagEmployee")
+  deviceFlagsAsPrevious AttendanceDeviceFlag[] @relation("DeviceFlagPreviousEmployee")
 
   @@index([officeId])
   @@index([departmentId])
@@ -269,6 +272,11 @@ model AttendanceRecord {
   clockOutNetworkId     String?
   clockInQrId           String?
   clockOutQrId           String?
+  // Persistent per-browser cookie ID (lib/security/deviceId.ts) — not a network
+  // identity like clockInIp, which every device on office Wi-Fi shares via NAT.
+  // Used to catch one device clocking in as different employees. See DeviceFlag.
+  clockInDeviceId       String?
+  clockOutDeviceId      String?
   verificationMethod    VerificationMethod?
   manualAdjustment      Boolean             @default(false)
   createdAt             DateTime            @default(now())
@@ -278,11 +286,43 @@ model AttendanceRecord {
   office   Office   @relation(fields: [officeId], references: [id])
 
   corrections AttendanceCorrection[]
+  deviceFlags AttendanceDeviceFlag[]
 
   @@unique([employeeId, attendanceDate])
   @@index([officeId, attendanceDate])
   @@index([attendanceDate])
+  @@index([clockInDeviceId])
   @@map("attendance_records")
+}
+
+/**
+ * Raised when a device (identified by its persistent cookie ID, not IP — every
+ * device on office Wi-Fi shares one public IP via NAT, so IP can't distinguish
+ * individual devices) clocks in as an employee it was NOT most recently seen
+ * clocking in as. Never blocks the clock-in itself — flagged for admin review,
+ * since shared devices (a reception tablet used as a fallback) are legitimate
+ * and would otherwise false-positive constantly.
+ */
+model AttendanceDeviceFlag {
+  id                 String    @id @default(cuid())
+  deviceId           String
+  attendanceRecordId String
+  employeeId         String
+  previousEmployeeId String
+  createdAt          DateTime  @default(now())
+  reviewed           Boolean   @default(false)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  reviewNote         String?
+
+  attendanceRecord AttendanceRecord @relation(fields: [attendanceRecordId], references: [id], onDelete: Cascade)
+  employee         Employee         @relation("DeviceFlagEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  previousEmployee Employee         @relation("DeviceFlagPreviousEmployee", fields: [previousEmployeeId], references: [id], onDelete: Cascade)
+  reviewedBy       User?            @relation(fields: [reviewedById], references: [id])
+
+  @@index([deviceId])
+  @@index([reviewed, createdAt])
+  @@map("attendance_device_flags")
 }
 
 model AttendanceCorrection {

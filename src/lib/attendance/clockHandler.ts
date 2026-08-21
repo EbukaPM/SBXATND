@@ -5,6 +5,7 @@ import { recordAttendance } from "./engine";
 import { DENIAL_MESSAGES } from "./messages";
 import { formatInTimeZone } from "date-fns-tz";
 import { getAttendanceSettings } from "./settings";
+import { DEVICE_ID_COOKIE, DEVICE_ID_COOKIE_OPTIONS, generateDeviceId } from "@/lib/security/deviceId";
 
 const bodySchema = z.object({
   attendanceId: z.string().min(3).max(40),
@@ -37,42 +38,57 @@ export async function handleClockRequest(request: NextRequest): Promise<NextResp
   // pass through client-side JS. A body field is also accepted for API clients.
   const cookieToken = request.cookies.get(QR_SESSION_COOKIE)?.value ?? null;
 
+  // proxy.ts assigns this on the first /register page load, so it's normally
+  // already present; generate one here too as a fallback (e.g. a direct API
+  // call that skipped the page) so device tracking never silently no-ops.
+  let deviceId = request.cookies.get(DEVICE_ID_COOKIE)?.value ?? null;
+  let setDeviceIdCookie = false;
+  if (!deviceId) {
+    deviceId = generateDeviceId();
+    setDeviceIdCookie = true;
+  }
+
   const result = await recordAttendance({
     attendanceIdRaw: parsed.attendanceId,
     sourceIp,
     userAgent: request.headers.get("user-agent"),
     qrSessionToken: cookieToken ?? parsed.qrSessionToken ?? null,
+    deviceId,
   });
 
   if (!result.ok) {
     const status = result.reason === "RATE_LIMITED" ? 429 : 403;
-    return NextResponse.json(
+    const response = NextResponse.json(
       { ok: false, reason: result.reason, message: DENIAL_MESSAGES[result.reason] },
       { status, headers: result.retryAfterSeconds ? { "Retry-After": String(result.retryAfterSeconds) } : {} }
     );
+    if (setDeviceIdCookie) response.cookies.set(DEVICE_ID_COOKIE, deviceId, DEVICE_ID_COOKIE_OPTIONS);
+    return response;
   }
 
   const settings = await getAttendanceSettings();
   const tz = settings.timezone;
 
-  if (result.action === "CLOCK_IN") {
-    return NextResponse.json({
-      ok: true,
-      action: "CLOCK_IN",
-      firstName: result.firstName,
-      time: formatInTimeZone(result.record.clockIn!, tz, "h:mm a"),
-      status: result.record.clockInStatus,
-      attendanceType: result.record.attendanceType,
-      minutesLate: result.record.minutesLate,
-    });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    action: "CLOCK_OUT",
-    firstName: result.firstName,
-    time: formatInTimeZone(result.record.clockOut!, tz, "h:mm a"),
-    clockInTime: formatInTimeZone(result.record.clockIn!, tz, "h:mm a"),
-    totalMinutesWorked: result.record.totalMinutesWorked,
-  });
+  const response = NextResponse.json(
+    result.action === "CLOCK_IN"
+      ? {
+          ok: true,
+          action: "CLOCK_IN",
+          firstName: result.firstName,
+          time: formatInTimeZone(result.record.clockIn!, tz, "h:mm a"),
+          status: result.record.clockInStatus,
+          attendanceType: result.record.attendanceType,
+          minutesLate: result.record.minutesLate,
+        }
+      : {
+          ok: true,
+          action: "CLOCK_OUT",
+          firstName: result.firstName,
+          time: formatInTimeZone(result.record.clockOut!, tz, "h:mm a"),
+          clockInTime: formatInTimeZone(result.record.clockIn!, tz, "h:mm a"),
+          totalMinutesWorked: result.record.totalMinutesWorked,
+        }
+  );
+  if (setDeviceIdCookie) response.cookies.set(DEVICE_ID_COOKIE, deviceId, DEVICE_ID_COOKIE_OPTIONS);
+  return response;
 }
