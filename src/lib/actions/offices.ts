@@ -7,11 +7,12 @@ import { prisma } from "@/lib/db/prisma";
 import { requirePermission } from "@/lib/auth/guard";
 import { recordAuditLog } from "@/lib/audit/log";
 import { generateRegistrationToken } from "@/lib/network/agentAuth";
+import { getClientIpFromHeaders } from "@/lib/network/getClientIp";
 import { nanoid } from "nanoid";
 
 async function actorIp(): Promise<string> {
   const hdrs = await headers();
-  return hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  return getClientIpFromHeaders(hdrs) ?? "unknown";
 }
 
 const officeSchema = z.object({
@@ -158,4 +159,58 @@ export async function setNetworkFailModeAction(networkId: string, failMode: "FAI
     ipAddress: await actorIp(),
   });
   revalidatePath("/admin/offices");
+}
+
+export interface AuthorizeNetworkResult {
+  ip: string;
+}
+
+/**
+ * Alternative to the Python Network Agent for offices with no dedicated
+ * always-on machine to run it: an admin who is physically connected to the
+ * office network they want to authorize clicks this, and the server captures
+ * *their own* current request IP — via the same trusted getClientIp() path
+ * every other security decision uses, never a client-supplied value — and
+ * sets it as the office's authorized network. Nothing else about attendance
+ * verification changes; this just populates OfficeNetwork.currentPublicIp
+ * through a different (manual) route than an agent heartbeat would.
+ */
+export async function authorizeCurrentNetworkAction(networkId: string): Promise<AuthorizeNetworkResult> {
+  const user = await requirePermission("network", "manage");
+  const hdrs = await headers();
+  const ip = getClientIpFromHeaders(hdrs);
+
+  if (!ip) {
+    throw new Error("Could not determine your current network's IP address. Please try again.");
+  }
+
+  const network = await prisma.officeNetwork.update({
+    where: { id: networkId },
+    data: { currentPublicIp: ip, lastVerifiedAt: new Date(), status: "VERIFIED" },
+  });
+
+  // Recorded as a heartbeat too (not just the audit log) so "View Heartbeats" history
+  // stays a complete picture of how the network got authorized, agent or manual.
+  await prisma.networkHeartbeat.create({
+    data: {
+      officeNetworkId: network.id,
+      agentId: `manual:${user.id}`,
+      sourceIp: ip,
+      reportedIp: ip,
+      timestamp: new Date(),
+      status: "MANUAL_ADMIN",
+    },
+  });
+
+  await recordAuditLog({
+    userId: user.id,
+    action: "network.manually_authorized",
+    resource: "office_network",
+    resourceId: networkId,
+    newValue: { ip },
+    ipAddress: ip,
+  });
+
+  revalidatePath("/admin/offices");
+  return { ip };
 }

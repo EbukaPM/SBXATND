@@ -2,10 +2,26 @@
 
 The Network Agent is a small Python script (`network-agent/agent.py`) that runs on a machine
 physically inside the office — it's what lets the attendance system keep tracking Starlink's
-changing public IP without anyone touching the app's code or config.
+changing public IP without anyone touching the app's code or config, automatically, every few
+minutes, with no admin action needed.
 
 It is **not** deployed to Netlify. Run it on an office PC, a small Linux box, or a Raspberry
 Pi that's on and connected to the office network essentially all the time.
+
+**Don't have a spare machine for this?** You don't need one. Admin → Offices & Network has an
+**Authorize This Network Now** button on every network — click it while your own phone/laptop
+is on the office Wi-Fi you want to authorize, and the server captures your device's own
+current IP (the same trusted mechanism every other network check uses) and sets it as the
+office's authorized network, no agent required. The tradeoff: it's a manual click instead of
+an automatic heartbeat, so re-click it whenever Starlink's IP actually changes (or before it
+goes stale — see `networkStaleThresholdMinutes` in Settings; raise that if you're doing this
+once a day rather than running an agent that heartbeats every few minutes). The rest of this
+document covers the automated agent option; skip to
+[docs/ADMIN_GUIDE.md](ADMIN_GUIDE.md) if the manual button is all you need.
+
+Note: there is no way for a website to read a device's Wi-Fi network *name* (SSID) —
+browsers deliberately block that for privacy, for any site, including this one. Both
+verification methods above work off the office's public IP address instead, never the SSID.
 
 ## 1. Register the network in the admin dashboard first
 

@@ -7,6 +7,7 @@ import {
   regenerateNetworkTokenAction,
   setNetworkEnabledAction,
   setNetworkFailModeAction,
+  authorizeCurrentNetworkAction,
 } from "@/lib/actions/offices";
 import type { OfficeNetwork } from "@prisma/client";
 
@@ -101,6 +102,8 @@ export function CreateNetworkForm({ officeId }: { officeId: string }) {
 export function NetworkRow({ network }: { network: OfficeNetwork }) {
   const [pending, startTransition] = useTransition();
   const [revealedToken, setRevealedToken] = useState<string | null>(null);
+  const [confirmingManual, setConfirmingManual] = useState(false);
+  const [manualResult, setManualResult] = useState<{ ip: string } | { error: string } | null>(null);
 
   const staleOrUnverified = network.status !== "VERIFIED";
 
@@ -137,8 +140,60 @@ export function NetworkRow({ network }: { network: OfficeNetwork }) {
             Done
           </Button>
         </div>
+      ) : manualResult ? (
+        "error" in manualResult ? (
+          <div className="mt-2 rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-800">
+            {manualResult.error}
+            <Button size="sm" variant="outline" className="ml-2" onClick={() => setManualResult(null)}>
+              Dismiss
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-2 rounded-md border border-green-300 bg-green-50 p-2 text-xs text-green-800">
+            Authorized — this network&apos;s IP is now <span className="font-mono">{manualResult.ip}</span>.
+            <Button size="sm" variant="outline" className="ml-2" onClick={() => setManualResult(null)}>
+              Done
+            </Button>
+          </div>
+        )
+      ) : confirmingManual ? (
+        <div className="mt-2 rounded-md border border-primary/40 bg-primary/5 p-3 text-xs">
+          <p className="font-medium">
+            Only continue if <strong>this device</strong> is connected to the Wi-Fi you want to authorize as{" "}
+            {network.name} right now.
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            This will set the office&apos;s authorized IP to whatever IP the server sees this very request coming from.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <Button
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  try {
+                    const r = await authorizeCurrentNetworkAction(network.id);
+                    setManualResult(r);
+                  } catch (err) {
+                    setManualResult({ error: err instanceof Error ? err.message : "Could not authorize." });
+                  } finally {
+                    setConfirmingManual(false);
+                  }
+                })
+              }
+            >
+              Yes, I&apos;m on this Wi-Fi now
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setConfirmingManual(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="mt-2 flex flex-wrap gap-2">
+          <Button size="sm" disabled={pending} onClick={() => setConfirmingManual(true)}>
+            Authorize This Network Now
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -177,7 +232,7 @@ export function NetworkRow({ network }: { network: OfficeNetwork }) {
       {staleOrUnverified ? (
         <p className="mt-2 text-xs text-amber-700">
           {network.failMode === "FAIL_CLOSED"
-            ? "Attendance will be denied at this office until the agent verifies."
+            ? "Attendance will be denied at this office until this network is authorized (via the agent, or the button above)."
             : "Attendance is currently allowed without live network verification (FAIL_OPEN)."}
         </p>
       ) : null}

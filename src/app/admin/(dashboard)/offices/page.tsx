@@ -18,7 +18,11 @@ export default async function OfficesPage() {
       <div>
         <h1 className="text-2xl font-bold">Offices &amp; Network</h1>
         <p className="text-sm text-muted-foreground">
-          Each office needs at least one verified network for network-based attendance checks to pass.
+          Each office needs at least one verified network for network-based attendance checks to pass. Two ways to
+          verify: run the Python Network Agent on an always-on office machine (auto-updates every few minutes — see
+          docs/OFFICE_NETWORK_AGENT_SETUP.md), or, if you don&apos;t have one, click{" "}
+          <strong>Authorize This Network Now</strong> below while connected to office Wi-Fi — no dedicated machine
+          needed, just re-click it whenever Starlink&apos;s IP changes.
         </p>
       </div>
 

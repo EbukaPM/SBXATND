@@ -73,6 +73,20 @@ poison the authorized IP; see the `networkAgent.test.ts` integration test
   (`lib/network/agentAuth.ts#verifyAgentSignature`), so a captured heartbeat can't be replayed
   indefinitely.
 
+### Manual network authorization (no agent)
+
+For offices with no dedicated always-on machine to run the agent,
+`lib/actions/offices.ts#authorizeCurrentNetworkAction` is the alternative: an authenticated
+admin with `network.manage` permission clicks a button, and the server sets
+`OfficeNetwork.currentPublicIp` to *that admin's own request's* source IP — read via the exact
+same `getClientIp`/`getClientIpFromHeaders` path every other network decision uses, never a
+value the client supplies. This is honest about its own limitation, unlike the agent: it only
+proves where the *admin* was standing at the moment they clicked, not that the office network
+hasn't changed since. The UI requires an explicit confirmation step naming the office before
+committing, and every use is both audit-logged (`network.manually_authorized`) and recorded as
+a `NetworkHeartbeat` row (`agentId: "manual:<userId>"`) so the admin history stays complete
+regardless of which method authorized a given IP.
+
 ## QR tokens
 
 See [docs/QR_ATTENDANCE.md](QR_ATTENDANCE.md) for the full lifecycle. Security-relevant

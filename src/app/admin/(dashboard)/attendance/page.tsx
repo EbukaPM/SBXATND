@@ -19,9 +19,9 @@ const STATUS_STYLES: Record<string, string> = {
 export default async function AttendanceListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string; q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; q?: string; status?: string; flagged?: string; page?: string }>;
 }) {
-  const { from, to, q, status, page } = await searchParams;
+  const { from, to, q, status, flagged, page } = await searchParams;
   const pageNum = Math.max(1, Number(page) || 1);
   const pageSize = 30;
 
@@ -41,11 +41,13 @@ export default async function AttendanceListPage({
       ],
     };
   }
+  if (flagged === "unreviewed") where.deviceFlags = { some: { reviewed: false } };
+  else if (flagged === "any") where.deviceFlags = { some: {} };
 
   const [records, total] = await Promise.all([
     prisma.attendanceRecord.findMany({
       where,
-      include: { employee: true, office: true },
+      include: { employee: true, office: true, deviceFlags: { select: { reviewed: true } } },
       orderBy: [{ attendanceDate: "desc" }, { clockIn: "desc" }],
       skip: (pageNum - 1) * pageSize,
       take: pageSize,
@@ -69,6 +71,11 @@ export default async function AttendanceListPage({
           <option value="MISSED_CLOCK_OUT">Missed clock-out</option>
           <option value="MANUALLY_ADJUSTED">Manually adjusted</option>
         </select>
+        <select name="flagged" defaultValue={flagged ?? ""} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="">All records</option>
+          <option value="unreviewed">🚩 Flagged, needs review</option>
+          <option value="any">🚩 Flagged (any)</option>
+        </select>
         <Button type="submit" variant="outline">
           Filter
         </Button>
@@ -89,12 +96,16 @@ export default async function AttendanceListPage({
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Type</th>
               <th className="px-4 py-2">Method</th>
+              <th className="px-4 py-2">Flag</th>
               <th className="px-4 py-2" />
             </tr>
           </thead>
           <tbody>
-            {records.map((r) => (
-              <tr key={r.id} className="border-b last:border-0">
+            {records.map((r) => {
+              const unreviewedFlag = r.deviceFlags.some((f) => !f.reviewed);
+              const anyFlag = r.deviceFlags.length > 0;
+              return (
+              <tr key={r.id} className={`border-b last:border-0 ${unreviewedFlag ? "bg-red-50/60" : ""}`}>
                 <td className="px-4 py-2">{r.attendanceDate.toISOString().slice(0, 10)}</td>
                 <td className="px-4 py-2">
                   {r.employee.firstName} {r.employee.lastName}
@@ -111,16 +122,34 @@ export default async function AttendanceListPage({
                 </td>
                 <td className="px-4 py-2">{r.attendanceType}</td>
                 <td className="px-4 py-2">{r.verificationMethod ?? "—"}</td>
+                <td className="px-4 py-2">
+                  {unreviewedFlag ? (
+                    <Link
+                      href="/admin/device-flags"
+                      className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 hover:bg-red-200"
+                      title="Device clocked in as a different employee than last seen — needs review"
+                    >
+                      🚩 Needs review
+                    </Link>
+                  ) : anyFlag ? (
+                    <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">
+                      🚩 Reviewed
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-right">
                   <Link href={`/admin/attendance/${r.id}`} className="text-primary hover:underline">
                     Correct
                   </Link>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {records.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
                   No attendance records found.
                 </td>
               </tr>

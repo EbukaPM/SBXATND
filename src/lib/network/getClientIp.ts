@@ -19,11 +19,22 @@ import type { NextRequest } from "next/server";
  * be relied on for security there.
  */
 export function getClientIp(request: NextRequest | Request): string | null {
-  const fromNetlify = request.headers.get("x-nf-client-connection-ip");
+  return getClientIpFromHeaders(request.headers);
+}
+
+/**
+ * Same logic as getClientIp, but for contexts that only have a Headers object —
+ * Server Actions read the incoming request's headers via next/headers' `headers()`
+ * rather than getting a Request object directly. Both paths see the identical
+ * Netlify-set header, since a Server Action's POST still passes through the same
+ * edge as any other request.
+ */
+export function getClientIpFromHeaders(headers: Headers): string | null {
+  const fromNetlify = headers.get("x-nf-client-connection-ip");
   if (fromNetlify) return normalizeIp(fromNetlify);
 
   if (process.env.NODE_ENV !== "production") {
-    const forwarded = request.headers.get("x-forwarded-for");
+    const forwarded = headers.get("x-forwarded-for");
     if (forwarded) return normalizeIp(forwarded.split(",")[0]!.trim());
     return "127.0.0.1";
   }

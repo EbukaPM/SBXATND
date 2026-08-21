@@ -18,12 +18,17 @@ account or a developer can reset it directly in the database — there's no self
    (default 9:00 AM), grace period (default 15 minutes — arriving up to 15 minutes late still
    counts as ON TIME), work end time, and attendance mode (QR + Network is recommended and is
    the default).
-3. **Offices & Network**: add your office (name, address). Then click **Register Network**
-   for that office — this gives you an `AGENT_ID` and a `REGISTRATION_TOKEN` shown once. Give
-   these to whoever is setting up the Network Agent (see
-   [OFFICE_NETWORK_AGENT_SETUP.md](OFFICE_NETWORK_AGENT_SETUP.md) — this part does need
-   someone comfortable with a terminal).
-4. Once the agent is running, the office should show **Network Status: VERIFIED**.
+3. **Offices & Network**: add your office (name, address), then click **Register Network** for
+   it. Two ways to verify it from here, pick whichever fits:
+   - **No spare machine for an agent**: while your own phone/laptop is on the office Wi-Fi,
+     click **Authorize This Network Now** and confirm. Done — re-click it whenever Starlink's
+     IP changes (or once a day is fine too, just raise the stale threshold in Settings →
+     Attendance rules if you're not re-clicking often).
+   - **Have a spare always-on machine**: use the `AGENT_ID`/`REGISTRATION_TOKEN` shown once to
+     set up the Network Agent instead — it heartbeats automatically every few minutes with no
+     ongoing admin action (see [OFFICE_NETWORK_AGENT_SETUP.md](OFFICE_NETWORK_AGENT_SETUP.md) —
+     this part does need someone comfortable with a terminal).
+4. Either way, the office should now show **Network Status: VERIFIED**.
 5. **Employees → Add Employee**: fill in name, office, department, job title. On save, you'll
    see their **Attendance ID once** — write it down / print it / share it with them securely
    right away. It cannot be viewed again later, only regenerated (which invalidates the old
