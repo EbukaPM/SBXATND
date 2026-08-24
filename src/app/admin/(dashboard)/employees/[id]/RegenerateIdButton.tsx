@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { regenerateAttendanceIdAction } from "@/lib/actions/employees";
 
-export function RegenerateIdButton({ employeeId }: { employeeId: string }) {
+export function RegenerateIdButton({ employeeId, disabled }: { employeeId: string; disabled?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [newId, setNewId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -45,7 +45,7 @@ export function RegenerateIdButton({ employeeId }: { employeeId: string }) {
   }
 
   return (
-    <Button size="sm" variant="outline" onClick={() => setConfirming(true)}>
+    <Button size="sm" variant="outline" disabled={disabled} onClick={() => setConfirming(true)}>
       Regenerate Attendance ID
     </Button>
   );

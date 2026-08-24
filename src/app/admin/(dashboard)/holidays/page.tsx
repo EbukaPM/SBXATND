@@ -25,26 +25,50 @@ export default async function HolidaysPage() {
         </CardHeader>
         <CardContent>
           <form action={createHolidayAction} className="flex flex-wrap items-end gap-2">
-            <div>
+            <div className="w-full sm:w-56">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
-              <Input name="name" required className="h-9 w-56" placeholder="Independence Day" />
+              <Input name="name" required className="h-9 w-full" placeholder="Independence Day" />
             </div>
-            <div>
+            <div className="w-full sm:w-40">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
-              <Input type="date" name="date" required className="h-9 w-40" />
+              <Input type="date" name="date" required className="h-9 w-full" />
             </div>
-            <div>
+            <div className="w-full sm:w-64">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
-              <Input name="description" className="h-9 w-64" />
+              <Input name="description" className="h-9 w-full" />
             </div>
-            <Button type="submit" size="sm">
+            <Button type="submit" size="sm" className="w-full sm:w-auto">
               Add
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {holidays.map((h) => (
+          <div key={h.id} className="flex items-start justify-between gap-2 rounded-lg border bg-card p-4">
+            <div className="min-w-0">
+              <p className="font-medium">{h.name}</p>
+              <p className="text-xs text-muted-foreground">{h.date.toISOString().slice(0, 10)}</p>
+              {h.description ? <p className="mt-1 text-sm text-muted-foreground">{h.description}</p> : null}
+            </div>
+            <form action={deleteHolidayAction.bind(null, h.id)} className="shrink-0">
+              <button type="submit" className="text-sm text-red-600 hover:underline">
+                Delete
+              </button>
+            </form>
+          </div>
+        ))}
+        {holidays.length === 0 ? (
+          <p className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            No holidays configured.
+          </p>
+        ) : null}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>

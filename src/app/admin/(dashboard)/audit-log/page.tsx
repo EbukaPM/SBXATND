@@ -37,14 +37,38 @@ export default async function AuditLogPage({
       </PageHeader>
       <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <form className="flex flex-wrap gap-2">
-        <Input name="action" defaultValue={action} placeholder="Filter by action…" className="w-56" />
-        <Input name="resource" defaultValue={resource} placeholder="Filter by resource…" className="w-56" />
+        <Input name="action" defaultValue={action} placeholder="Filter by action…" className="w-full sm:w-56" />
+        <Input name="resource" defaultValue={resource} placeholder="Filter by resource…" className="w-full sm:w-56" />
         <Button type="submit" variant="outline">
           Filter
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {logs.map((log) => (
+          <div key={log.id} className="rounded-lg border bg-card p-4 text-sm">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-mono text-xs">{log.action}</p>
+              <p className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{log.createdAt.toLocaleString()}</p>
+            </div>
+            <p className="mt-1 text-muted-foreground">{log.user?.fullName ?? "System"}</p>
+            <p className="mt-1 font-mono text-xs text-muted-foreground">
+              {log.resource}
+              {log.resourceId ? `:${log.resourceId.slice(0, 8)}` : ""} · {log.ipAddress ?? "—"}
+            </p>
+            {log.reason ? <p className="mt-1 text-xs">{log.reason}</p> : null}
+          </div>
+        ))}
+        {logs.length === 0 ? (
+          <p className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            No audit log entries found.
+          </p>
+        ) : null}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>

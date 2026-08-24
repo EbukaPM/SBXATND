@@ -10,4 +10,6 @@ export const DENIAL_MESSAGES: Record<AttendanceDenialReason, string> = {
   NETWORK_DENIED:
     "Attendance unavailable.\nYou must be connected to the company's authorized office network to clock attendance.",
   ALREADY_COMPLETE: "You have already clocked in and out today.",
+  EARLY_CLOCKOUT_REASON_REQUIRED:
+    "You're clocking out before the end of your scheduled work day.\nPlease briefly state why (max 50 words) to continue.",
 };

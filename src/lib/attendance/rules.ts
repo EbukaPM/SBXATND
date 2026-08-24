@@ -1,5 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import type { AttendanceSettings, ClockInStatus, AttendanceType } from "@prisma/client";
+import type { AttendanceSettings, ClockInStatus, ClockOutStatus, AttendanceType } from "@prisma/client";
 
 /** The employee's calendar date in the office timezone, as a UTC-midnight Date (for the `@db.Date` column). */
 export function getAttendanceDateKey(instant: Date, timezone: string): Date {
@@ -57,4 +57,22 @@ export function classifyClockIn(
 
 export function calculateMinutesWorked(clockIn: Date, clockOut: Date): number {
   return Math.max(0, Math.round((clockOut.getTime() - clockIn.getTime()) / 60_000));
+}
+
+/** Clocking out before the scheduled end of day is EARLY (and requires a reason —
+ * see engine.ts); anything at/after workEnd is ON_TIME regardless of how late it is. */
+export function classifyClockOut(
+  clockOutInstant: Date,
+  settings: Pick<AttendanceSettings, "timezone" | "workEnd">
+): ClockOutStatus {
+  const dateKey = getAttendanceDateKey(clockOutInstant, settings.timezone);
+  const scheduledEnd = scheduledInstant(dateKey, settings.workEnd, settings.timezone);
+  return clockOutInstant.getTime() < scheduledEnd.getTime() ? "EARLY" : "ON_TIME";
+}
+
+export const MAX_EARLY_CLOCKOUT_REASON_WORDS = 50;
+
+export function countWords(text: string): number {
+  const trimmed = text.trim();
+  return trimmed === "" ? 0 : trimmed.split(/\s+/).length;
 }

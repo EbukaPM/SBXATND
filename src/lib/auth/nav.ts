@@ -12,6 +12,8 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/employees", label: "Employees", resource: "employees" },
   { href: "/admin/attendance", label: "Attendance", resource: "attendance" },
   { href: "/admin/device-flags", label: "Device Flags", resource: "deviceFlags" },
+  { href: "/admin/deletion-requests", label: "Deletion Requests", resource: "deletionRequests" },
+  { href: "/admin/notifications", label: "Notifications", resource: "notifications" },
   { href: "/admin/qr", label: "QR Codes", resource: "qr" },
   { href: "/admin/offices", label: "Offices & Network", resource: "offices" },
   { href: "/admin/holidays", label: "Holidays", resource: "settings" },

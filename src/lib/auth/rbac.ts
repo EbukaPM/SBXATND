@@ -6,7 +6,14 @@ import type { AdminRole } from "@prisma/client";
  * per the requirement that it "require elevated permission".
  */
 export const PERMISSIONS = {
-  employees: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"], manage: ["SUPER_ADMIN", "ADMIN", "HR"] },
+  employees: {
+    view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"],
+    manage: ["SUPER_ADMIN", "ADMIN", "HR"],
+    // "delete" only ever takes immediate effect for SUPER_ADMIN — see
+    // requestDeleteEmployeeAction. ADMIN/HR calling it merely files a request.
+    delete: ["SUPER_ADMIN", "ADMIN", "HR"],
+    approveDeletion: ["SUPER_ADMIN"],
+  },
   attendance: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"], manage: ["SUPER_ADMIN", "ADMIN", "HR"] },
   deviceFlags: { view: ["SUPER_ADMIN", "ADMIN", "HR"], manage: ["SUPER_ADMIN", "ADMIN", "HR"] },
   reports: { view: ["SUPER_ADMIN", "ADMIN", "HR", "VIEWER"] },
@@ -16,6 +23,8 @@ export const PERMISSIONS = {
   settings: { view: ["SUPER_ADMIN", "ADMIN"], manage: ["SUPER_ADMIN"] },
   admins: { view: ["SUPER_ADMIN"], manage: ["SUPER_ADMIN"] },
   auditLog: { view: ["SUPER_ADMIN", "ADMIN"] },
+  notifications: { view: ["SUPER_ADMIN"], manage: ["SUPER_ADMIN"] },
+  deletionRequests: { view: ["SUPER_ADMIN"] },
 } as const satisfies Record<string, Record<string, readonly AdminRole[]>>;
 
 export function hasPermission(

@@ -30,6 +30,16 @@ export default async function AttendanceCorrectionPage({ params }: { params: Pro
         <p className="text-sm text-muted-foreground">{record.office.name}</p>
       </PageHeader>
       <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
+      {record.clockOutStatus === "EARLY" ? (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardHeader>
+            <CardTitle className="text-amber-800">Clocked out early</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <p>&ldquo;{record.earlyClockOutReason}&rdquo;</p>
+          </CardContent>
+        </Card>
+      ) : null}
       {record.deviceFlags.length > 0 ? (
         <Card className="border-red-300 bg-red-50/60">
           <CardHeader>

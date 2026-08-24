@@ -33,19 +33,19 @@ export default async function OfficesPage() {
         </CardHeader>
         <CardContent>
           <form action={createOfficeAction} className="flex flex-wrap items-end gap-2">
-            <div>
+            <div className="w-full sm:w-48">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
-              <Input name="name" required className="h-9 w-48" placeholder="Head Office" />
+              <Input name="name" required className="h-9 w-full" placeholder="Head Office" />
             </div>
-            <div>
+            <div className="w-full sm:w-64">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Address</label>
-              <Input name="address" className="h-9 w-64" placeholder="12 Admiralty Way, Lekki" />
+              <Input name="address" className="h-9 w-full" placeholder="12 Admiralty Way, Lekki" />
             </div>
-            <div>
+            <div className="w-full sm:w-40">
               <label className="mb-1 block text-xs font-medium text-muted-foreground">Timezone</label>
-              <Input name="timezone" defaultValue="Africa/Lagos" className="h-9 w-40" />
+              <Input name="timezone" defaultValue="Africa/Lagos" className="h-9 w-full" />
             </div>
-            <Button type="submit" size="sm">
+            <Button type="submit" size="sm" className="w-full sm:w-auto">
               Add Office
             </Button>
           </form>

@@ -128,13 +128,34 @@ describeIfDb("recordAttendance — integration", () => {
       expect(first.ok).toBe(true);
       if (first.ok) expect(first.action).toBe("CLOCK_IN");
 
-      const second = await recordAttendance(input);
+      // The test clocks out seconds after clocking in, i.e. before workEnd (17:00) —
+      // a reason is required, same as the real early-clock-out flow.
+      const second = await recordAttendance({ ...input, earlyClockOutReason: "Leaving early for a doctor's appointment" });
       expect(second.ok).toBe(true);
       if (second.ok) expect(second.action).toBe("CLOCK_OUT");
 
       const third = await recordAttendance(input);
       expect(third.ok).toBe(false);
       if (!third.ok) expect(third.reason).toBe("ALREADY_COMPLETE");
+    });
+
+    it("requires a reason to clock out before the scheduled end of day, then accepts it", async () => {
+      const { attendanceId } = await makeEmployee();
+      const input = { attendanceIdRaw: attendanceId, sourceIp: "102.89.0.1", userAgent: "vitest" };
+
+      const clockIn = await recordAttendance(input);
+      expect(clockIn.ok).toBe(true);
+
+      const withoutReason = await recordAttendance(input);
+      expect(withoutReason.ok).toBe(false);
+      if (!withoutReason.ok) expect(withoutReason.reason).toBe("EARLY_CLOCKOUT_REASON_REQUIRED");
+
+      const withReason = await recordAttendance({ ...input, earlyClockOutReason: "Feeling unwell" });
+      expect(withReason.ok).toBe(true);
+      if (withReason.ok && withReason.action === "CLOCK_OUT") {
+        expect(withReason.record.clockOutStatus).toBe("EARLY");
+        expect(withReason.record.earlyClockOutReason).toBe("Feeling unwell");
+      }
     });
 
     it("does not create two records for concurrent simultaneous clock-in requests", async () => {
@@ -200,6 +221,7 @@ describeIfDb("recordAttendance — integration", () => {
         sourceIp: "102.89.0.1",
         userAgent: "vitest",
         deviceId,
+        earlyClockOutReason: "Personal errand",
       });
       expect(clockOut.ok).toBe(true);
 

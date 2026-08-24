@@ -21,7 +21,7 @@ export default async function EmployeesPage({
 }) {
   const { q, status } = await searchParams;
 
-  const where: Prisma.EmployeeWhereInput = {};
+  const where: Prisma.EmployeeWhereInput = { isDeleted: false };
   if (status) where.employmentStatus = status as EmploymentStatus;
   if (q) {
     where.OR = [
@@ -51,8 +51,12 @@ export default async function EmployeesPage({
       </PageHeader>
       <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <form className="flex flex-wrap gap-2">
-        <Input name="q" defaultValue={q} placeholder="Search name, number, email…" className="w-64" />
-        <select name="status" defaultValue={status ?? ""} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+        <Input name="q" defaultValue={q} placeholder="Search name, number, email…" className="w-full sm:w-64" />
+        <select
+          name="status"
+          defaultValue={status ?? ""}
+          className="h-10 flex-1 rounded-md border border-input bg-background px-3 text-sm sm:flex-none"
+        >
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
@@ -64,7 +68,40 @@ export default async function EmployeesPage({
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {employees.map((e) => (
+          <Link
+            key={e.id}
+            href={`/admin/employees/${e.id}`}
+            className="block rounded-lg border bg-card p-4 active:bg-muted/30"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-medium">
+                  {e.firstName} {e.lastName}
+                </p>
+                <p className="font-mono text-xs text-muted-foreground">{e.employeeNumber}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[e.employmentStatus]}`}>
+                {e.employmentStatus}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {e.office.name}
+              {e.department ? ` · ${e.department.name}` : ""}
+            </p>
+          </Link>
+        ))}
+        {employees.length === 0 ? (
+          <p className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            No employees found.
+          </p>
+        ) : null}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>

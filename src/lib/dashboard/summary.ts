@@ -8,7 +8,7 @@ export async function getTodaySummary() {
   const today = getAttendanceDateKey(new Date(), settings.timezone);
 
   const [totalActiveEmployees, records] = await Promise.all([
-    prisma.employee.count({ where: { employmentStatus: "ACTIVE" } }),
+    prisma.employee.count({ where: { employmentStatus: "ACTIVE", isDeleted: false } }),
     prisma.attendanceRecord.findMany({
       where: { attendanceDate: today },
       include: { employee: { select: { firstName: true, lastName: true, employeeNumber: true } } },

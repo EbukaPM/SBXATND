@@ -10,6 +10,7 @@ import { DEVICE_ID_COOKIE, DEVICE_ID_COOKIE_OPTIONS, generateDeviceId } from "@/
 const bodySchema = z.object({
   attendanceId: z.string().min(3).max(40),
   qrSessionToken: z.string().min(10).max(200).optional(),
+  earlyClockOutReason: z.string().max(400).optional(),
 });
 
 const MAX_BODY_BYTES = 4096;
@@ -54,6 +55,7 @@ export async function handleClockRequest(request: NextRequest): Promise<NextResp
     userAgent: request.headers.get("user-agent"),
     qrSessionToken: cookieToken ?? parsed.qrSessionToken ?? null,
     deviceId,
+    earlyClockOutReason: parsed.earlyClockOutReason ?? null,
   });
 
   if (!result.ok) {
@@ -87,6 +89,7 @@ export async function handleClockRequest(request: NextRequest): Promise<NextResp
           time: formatInTimeZone(result.record.clockOut!, tz, "h:mm a"),
           clockInTime: formatInTimeZone(result.record.clockIn!, tz, "h:mm a"),
           totalMinutesWorked: result.record.totalMinutesWorked,
+          clockOutStatus: result.record.clockOutStatus,
         }
   );
   if (setDeviceIdCookie) response.cookies.set(DEVICE_ID_COOKIE, deviceId, DEVICE_ID_COOKIE_OPTIONS);

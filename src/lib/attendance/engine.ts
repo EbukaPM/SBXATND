@@ -1,12 +1,20 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { getAttendanceSettings } from "./settings";
-import { classifyClockIn, calculateMinutesWorked, getAttendanceDateKey, isWeekend } from "./rules";
+import {
+  classifyClockIn,
+  classifyClockOut,
+  calculateMinutesWorked,
+  getAttendanceDateKey,
+  isWeekend,
+  MAX_EARLY_CLOCKOUT_REASON_WORDS,
+} from "./rules";
 import { verifyOfficeNetwork } from "@/lib/network/verifyOfficeNetwork";
 import { hashAttendanceId, normalizeAttendanceId } from "@/lib/security/attendanceId";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rateLimit";
 import { getActiveQrSession, consumeQrSession } from "@/lib/qr/session";
 import { flagDeviceReuseIfNeeded } from "./deviceFlags";
+import { notifyRole } from "@/lib/notifications/create";
 import type { AttendanceRecord, VerificationMethod } from "@prisma/client";
 
 export type AttendanceDenialReason =
@@ -16,7 +24,8 @@ export type AttendanceDenialReason =
   | "QR_SESSION_INVALID"
   | "QR_WRONG_OFFICE"
   | "NETWORK_DENIED"
-  | "ALREADY_COMPLETE";
+  | "ALREADY_COMPLETE"
+  | "EARLY_CLOCKOUT_REASON_REQUIRED";
 
 export type AttendanceActionResult =
   | {
@@ -40,6 +49,33 @@ export interface RecordAttendanceInput {
   qrSessionToken?: string | null;
   /** Persistent per-browser cookie ID, not a network identity — see lib/security/deviceId.ts. */
   deviceId?: string | null;
+  /** Required when clocking out before the scheduled end of day; ignored otherwise. */
+  earlyClockOutReason?: string | null;
+}
+
+/** Alerts Super Admins the first time an office's clock-in is blocked because its
+ * previously-authorized IP no longer matches (changed Wi-Fi IP, or gone stale past
+ * the grace window) — i.e. exactly the "employees can't log in" scenario, not a
+ * simple missing-config case. Deduped per office for an hour so one flaky network
+ * doesn't spam an alert per failed clock-in attempt. */
+async function alertSuperAdminsOfNetworkDenial(
+  officeId: string,
+  reason: "STALE_FAIL_CLOSED" | "IP_NOT_AUTHORIZED"
+): Promise<void> {
+  const office = await prisma.office.findUnique({ where: { id: officeId }, select: { name: true } });
+  const officeName = office?.name ?? "an office";
+  const detail =
+    reason === "STALE_FAIL_CLOSED"
+      ? "its authorized network hasn't re-verified recently and is being treated as no longer active"
+      : "the request's IP no longer matches any authorized network";
+  await notifyRole({
+    type: "NETWORK_IP_CHANGED",
+    targetRole: "SUPER_ADMIN",
+    officeId,
+    title: `${officeName}: employees can't clock in — network IP changed`,
+    message: `An employee at ${officeName} was just blocked from clocking in because ${detail}. Re-authorize the current network from Offices & Network, or check the network agent.`,
+    dedupeWindowMinutes: 60,
+  });
 }
 
 /**
@@ -56,7 +92,7 @@ export async function recordAttendance(input: RecordAttendanceInput): Promise<At
 
   const lookup = hashAttendanceId(normalizeAttendanceId(input.attendanceIdRaw));
   const employee = await prisma.employee.findUnique({ where: { attendanceIdLookup: lookup } });
-  if (!employee || employee.employmentStatus !== "ACTIVE") {
+  if (!employee || employee.isDeleted || employee.employmentStatus !== "ACTIVE") {
     return { ok: false, reason: "INVALID_EMPLOYEE" };
   }
 
@@ -89,6 +125,9 @@ export async function recordAttendance(input: RecordAttendanceInput): Promise<At
   if (requiresNetwork) {
     const netResult = await verifyOfficeNetwork(employee.officeId, input.sourceIp);
     if (!netResult.allowed) {
+      if (netResult.reason === "STALE_FAIL_CLOSED" || netResult.reason === "IP_NOT_AUTHORIZED") {
+        await alertSuperAdminsOfNetworkDenial(employee.officeId, netResult.reason);
+      }
       return { ok: false, reason: "NETWORK_DENIED" };
     }
     officeNetworkId = netResult.officeNetworkId;
@@ -147,11 +186,26 @@ export async function recordAttendance(input: RecordAttendanceInput): Promise<At
       return { ok: true, action: "CLOCK_IN", record, firstName: employee.firstName };
     }
 
+    const clockOutStatus = classifyClockOut(now, settings);
+    let earlyClockOutReason: string | null = null;
+    if (clockOutStatus === "EARLY") {
+      const reason = input.earlyClockOutReason?.trim() ?? "";
+      if (!reason) {
+        return { ok: false, reason: "EARLY_CLOCKOUT_REASON_REQUIRED" };
+      }
+      // The client already enforces this live; re-checked here since nothing from
+      // the client is trusted. Truncate rather than reject — the client-visible
+      // reason was already within limits, this is just defense-in-depth.
+      earlyClockOutReason = reason.split(/\s+/).slice(0, MAX_EARLY_CLOCKOUT_REASON_WORDS).join(" ");
+    }
+
     const totalMinutesWorked = calculateMinutesWorked(existing.clockIn!, now);
     const record = await prisma.attendanceRecord.update({
       where: { id: existing.id },
       data: {
         clockOut: now,
+        clockOutStatus,
+        earlyClockOutReason,
         clockOutIp: input.sourceIp,
         clockOutUserAgent: input.userAgent,
         clockOutNetworkId: officeNetworkId,

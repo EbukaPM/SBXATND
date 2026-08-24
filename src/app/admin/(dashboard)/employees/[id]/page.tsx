@@ -4,17 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { requireUser } from "@/lib/auth/guard";
 import { updateEmployeeAction } from "@/lib/actions/employees";
 import { RegenerateIdButton } from "./RegenerateIdButton";
 import { StatusButtons } from "./StatusButtons";
+import { DeleteEmployeeForm } from "./DeleteEmployeeForm";
+import { ReviewDeletionForm } from "../../deletion-requests/ReviewDeletionForm";
 import { formatInTimeZone } from "date-fns-tz";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const actor = await requireUser();
 
-  const [employee, offices, departments, history] = await Promise.all([
+  const [employee, offices, departments, history, latestDeletionRequest] = await Promise.all([
     prisma.employee.findUnique({ where: { id }, include: { office: true, department: true } }),
     prisma.office.findMany({ orderBy: { name: "asc" } }),
     prisma.department.findMany({ orderBy: { name: "asc" } }),
@@ -23,11 +27,17 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       orderBy: { attendanceDate: "desc" },
       take: 15,
     }),
+    prisma.employeeDeletionRequest.findFirst({
+      where: { employeeId: id },
+      orderBy: { createdAt: "desc" },
+      include: { requestedBy: true, reviewedBy: true },
+    }),
   ]);
 
   if (!employee) notFound();
 
   const updateWithId = updateEmployeeAction.bind(null, employee.id);
+  const pendingDeletion = latestDeletionRequest?.status === "PENDING" ? latestDeletionRequest : null;
 
   return (
     <>
@@ -40,6 +50,27 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         </p>
       </PageHeader>
       <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
+      {employee.isDeleted ? (
+        <Card className="border-red-300 bg-red-50/60">
+          <CardContent className="pt-6 text-sm text-red-800">
+            This employee was deleted on {employee.deletedAt?.toLocaleString()}. They can no longer clock in and
+            are hidden from active lists, but their attendance history is preserved below.
+          </CardContent>
+        </Card>
+      ) : pendingDeletion ? (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-start sm:justify-between">
+            <div className="text-sm text-amber-900">
+              <p className="font-medium">Deletion requested — pending Super Admin approval</p>
+              <p className="mt-1">
+                By {pendingDeletion.requestedBy.fullName} on {pendingDeletion.createdAt.toLocaleString()}: &ldquo;
+                {pendingDeletion.reason}&rdquo;
+              </p>
+            </div>
+            {actor.role === "SUPER_ADMIN" ? <ReviewDeletionForm requestId={pendingDeletion.id} /> : null}
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -101,7 +132,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
               <CardTitle>Employment status</CardTitle>
             </CardHeader>
             <CardContent>
-              <StatusButtons employeeId={employee.id} current={employee.employmentStatus} />
+              <StatusButtons employeeId={employee.id} current={employee.employmentStatus} disabled={employee.isDeleted} />
               {employee.employmentStatus !== "ACTIVE" ? (
                 <p className="mt-2 text-xs text-amber-700">
                   Only ACTIVE employees can clock attendance.
@@ -119,9 +150,20 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                 The Attendance ID itself is never stored or displayed after creation — only a secure hash is kept.
                 Regenerate it if the employee has lost their ID card.
               </p>
-              <RegenerateIdButton employeeId={employee.id} />
+              <RegenerateIdButton employeeId={employee.id} disabled={employee.isDeleted} />
             </CardContent>
           </Card>
+
+          {!employee.isDeleted && !pendingDeletion ? (
+            <Card className="border-red-200">
+              <CardHeader>
+                <CardTitle className="text-red-700">Danger zone</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DeleteEmployeeForm employeeId={employee.id} isSuperAdmin={actor.role === "SUPER_ADMIN"} />
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
       </div>
 
@@ -145,7 +187,17 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                 <tr key={r.id} className="border-b last:border-0">
                   <td className="py-2 pr-4">{r.attendanceDate.toISOString().slice(0, 10)}</td>
                   <td className="py-2 pr-4">{r.clockIn ? formatInTimeZone(r.clockIn, "Africa/Lagos", "h:mm a") : "—"}</td>
-                  <td className="py-2 pr-4">{r.clockOut ? formatInTimeZone(r.clockOut, "Africa/Lagos", "h:mm a") : "—"}</td>
+                  <td className="py-2 pr-4">
+                    {r.clockOut ? formatInTimeZone(r.clockOut, "Africa/Lagos", "h:mm a") : "—"}
+                    {r.clockOutStatus === "EARLY" ? (
+                      <span
+                        className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                        title={r.earlyClockOutReason ?? undefined}
+                      >
+                        Early — {r.earlyClockOutReason}
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="py-2 pr-4">{r.clockInStatus ?? "—"}</td>
                   <td className="py-2 pr-4">{r.attendanceType}</td>
                 </tr>

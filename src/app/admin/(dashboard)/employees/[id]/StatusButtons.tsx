@@ -7,7 +7,15 @@ import type { EmploymentStatus } from "@prisma/client";
 
 const OPTIONS: EmploymentStatus[] = ["ACTIVE", "INACTIVE", "SUSPENDED", "EXITED"];
 
-export function StatusButtons({ employeeId, current }: { employeeId: string; current: EmploymentStatus }) {
+export function StatusButtons({
+  employeeId,
+  current,
+  disabled,
+}: {
+  employeeId: string;
+  current: EmploymentStatus;
+  disabled?: boolean;
+}) {
   const [pending, startTransition] = useTransition();
 
   return (
@@ -17,7 +25,7 @@ export function StatusButtons({ employeeId, current }: { employeeId: string; cur
           key={status}
           size="sm"
           variant={status === current ? "default" : "outline"}
-          disabled={pending || status === current}
+          disabled={disabled || pending || status === current}
           onClick={() => startTransition(() => setEmploymentStatusAction(employeeId, status))}
         >
           {status}

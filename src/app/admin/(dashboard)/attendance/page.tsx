@@ -63,10 +63,14 @@ export default async function AttendanceListPage({
       </PageHeader>
       <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">
       <form className="flex flex-wrap gap-2">
-        <Input type="date" name="from" defaultValue={from} className="w-40" />
-        <Input type="date" name="to" defaultValue={to} className="w-40" />
-        <Input name="q" defaultValue={q} placeholder="Search employee…" className="w-56" />
-        <select name="status" defaultValue={status ?? ""} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+        <Input type="date" name="from" defaultValue={from} className="w-[calc(50%-0.25rem)] sm:w-40" />
+        <Input type="date" name="to" defaultValue={to} className="w-[calc(50%-0.25rem)] sm:w-40" />
+        <Input name="q" defaultValue={q} placeholder="Search employee…" className="w-full sm:w-56" />
+        <select
+          name="status"
+          defaultValue={status ?? ""}
+          className="h-10 w-[calc(50%-0.25rem)] rounded-md border border-input bg-background px-3 text-sm sm:w-auto"
+        >
           <option value="">All statuses</option>
           <option value="EARLY">Early</option>
           <option value="ON_TIME">On time</option>
@@ -74,20 +78,81 @@ export default async function AttendanceListPage({
           <option value="MISSED_CLOCK_OUT">Missed clock-out</option>
           <option value="MANUALLY_ADJUSTED">Manually adjusted</option>
         </select>
-        <select name="flagged" defaultValue={flagged ?? ""} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+        <select
+          name="flagged"
+          defaultValue={flagged ?? ""}
+          className="h-10 w-[calc(50%-0.25rem)] rounded-md border border-input bg-background px-3 text-sm sm:w-auto"
+        >
           <option value="">All records</option>
           <option value="unreviewed">🚩 Flagged, needs review</option>
           <option value="any">🚩 Flagged (any)</option>
         </select>
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" className="flex-1 sm:flex-none">
           Filter
         </Button>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="flex-1 sm:flex-none">
           <a href={`/api/reports/daily?format=csv&from=${from ?? ""}&to=${to ?? ""}`}>Export CSV</a>
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {records.map((r) => {
+          const unreviewedFlag = r.deviceFlags.some((f) => !f.reviewed);
+          const anyFlag = r.deviceFlags.length > 0;
+          return (
+            <Link
+              key={r.id}
+              href={`/admin/attendance/${r.id}`}
+              className={`block rounded-lg border p-4 active:bg-muted/30 ${unreviewedFlag ? "border-red-300 bg-red-50/60" : "bg-card"}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-medium">
+                    {r.employee.firstName} {r.employee.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {r.attendanceDate.toISOString().slice(0, 10)} · {r.office.name}
+                  </p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[r.clockInStatus ?? ""] ?? ""}`}>
+                  {r.clockInStatus ?? "—"}
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <span>In: {r.clockIn ? formatInTimeZone(r.clockIn, "Africa/Lagos", "h:mm a") : "—"}</span>
+                <span>
+                  Out: {r.clockOut ? formatInTimeZone(r.clockOut, "Africa/Lagos", "h:mm a") : r.clockIn ? "Missing" : "—"}
+                </span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {r.clockOutStatus === "EARLY" ? (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    Early clock-out
+                  </span>
+                ) : null}
+                {unreviewedFlag ? (
+                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    🚩 Needs review
+                  </span>
+                ) : anyFlag ? (
+                  <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700">
+                    🚩 Reviewed
+                  </span>
+                ) : null}
+              </div>
+            </Link>
+          );
+        })}
+        {records.length === 0 ? (
+          <p className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            No attendance records found.
+          </p>
+        ) : null}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>
@@ -117,6 +182,14 @@ export default async function AttendanceListPage({
                 <td className="px-4 py-2">{r.clockIn ? formatInTimeZone(r.clockIn, "Africa/Lagos", "h:mm a") : "—"}</td>
                 <td className="px-4 py-2">
                   {r.clockOut ? formatInTimeZone(r.clockOut, "Africa/Lagos", "h:mm a") : r.clockIn ? "Missing" : "—"}
+                  {r.clockOutStatus === "EARLY" ? (
+                    <span
+                      className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                      title={r.earlyClockOutReason ?? undefined}
+                    >
+                      Early
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-4 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[r.clockInStatus ?? ""] ?? ""}`}>

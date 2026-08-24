@@ -45,6 +45,8 @@ model User {
   qrCodesDeactivated  AttendanceQrCode[] @relation("QrDeactivatedBy")
   attendanceCorrections AttendanceCorrection[]
   deviceFlagsReviewed AttendanceDeviceFlag[]
+  deletionRequestsMade     EmployeeDeletionRequest[] @relation("DeletionRequestedBy")
+  deletionRequestsReviewed EmployeeDeletionRequest[] @relation("DeletionReviewedBy")
 
   @@index([email])
   @@map("users")
@@ -94,6 +96,7 @@ model Office {
   qrCodes         AttendanceQrCode[]
   attendanceRecords AttendanceRecord[]
   qrSessions      QrAttendanceSession[]
+  notifications   Notification[]
 
   @@map("offices")
 }
@@ -124,6 +127,11 @@ model Employee {
   dateEmployed     DateTime?
   profilePhotoUrl  String?
   officeId         String
+  // Soft-delete: hidden from all active lists and clock-in lookup once true, but the
+  // row and its attendance history are preserved for reporting/audit and can be
+  // restored. See EmployeeDeletionRequest for the approval workflow that sets this.
+  isDeleted        Boolean          @default(false)
+  deletedAt        DateTime?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -134,11 +142,45 @@ model Employee {
   attendanceIdHistory AttendanceIdHistory[]
   deviceFlagsAsCurrent  AttendanceDeviceFlag[] @relation("DeviceFlagEmployee")
   deviceFlagsAsPrevious AttendanceDeviceFlag[] @relation("DeviceFlagPreviousEmployee")
+  deletionRequests  EmployeeDeletionRequest[]
 
   @@index([officeId])
   @@index([departmentId])
   @@index([employmentStatus])
+  @@index([isDeleted])
   @@map("employees")
+}
+
+enum DeletionRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/**
+ * Only SUPER_ADMIN can delete an employee immediately. ADMIN/HR can request a
+ * deletion (reason required), which stays PENDING — and the employee stays fully
+ * active — until a SUPER_ADMIN approves or rejects it. Approval soft-deletes the
+ * employee (Employee.isDeleted); rejection leaves them untouched.
+ */
+model EmployeeDeletionRequest {
+  id            String                 @id @default(cuid())
+  employeeId    String
+  requestedById String
+  reason        String                 @db.VarChar(500)
+  status        DeletionRequestStatus  @default(PENDING)
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNote    String?
+  createdAt     DateTime               @default(now())
+
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  requestedBy User     @relation("DeletionRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy  User?    @relation("DeletionReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+  @@map("employee_deletion_requests")
 }
 
 // Keeps an auditable trail every time an Attendance ID is regenerated.
@@ -240,6 +282,11 @@ enum ClockInStatus {
   MANUALLY_ADJUSTED
 }
 
+enum ClockOutStatus {
+  EARLY
+  ON_TIME
+}
+
 enum AttendanceType {
   REGULAR
   WEEKEND_OVERTIME
@@ -261,6 +308,10 @@ model AttendanceRecord {
   clockIn               DateTime?
   clockOut              DateTime?
   clockInStatus         ClockInStatus?
+  clockOutStatus        ClockOutStatus?
+  // Required whenever clockOutStatus is EARLY (employee clocked out before workEnd);
+  // capped at 50 words, enforced both client-side and server-side. See lib/attendance/rules.ts.
+  earlyClockOutReason   String?             @db.VarChar(400)
   attendanceType         AttendanceType      @default(REGULAR)
   minutesLate           Int                 @default(0)
   totalMinutesWorked    Int?
@@ -456,6 +507,39 @@ model AttendanceSettings {
   updatedAt                 DateTime       @updatedAt
 
   @@map("attendance_settings")
+}
+
+// ---------------------------------------------------------------------------
+// In-app / email notifications
+// ---------------------------------------------------------------------------
+
+enum NotificationType {
+  NETWORK_IP_CHANGED
+  EMPLOYEE_DELETION_REQUESTED
+}
+
+/**
+ * Broadcast to every active user with `targetRole` (currently always SUPER_ADMIN) —
+ * not per-recipient, so "read" is shared across all of them. Fine at this org's
+ * scale (a handful of admins); see lib/notifications/create.ts for dedupe logic
+ * that stops one flaky network from spamming a notification per failed clock-in.
+ */
+model Notification {
+  id         String           @id @default(cuid())
+  type       NotificationType
+  title      String
+  message    String
+  targetRole AdminRole
+  officeId   String?
+  read       Boolean          @default(false)
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  office Office? @relation(fields: [officeId], references: [id], onDelete: Cascade)
+
+  @@index([targetRole, read, createdAt])
+  @@index([type, officeId, createdAt])
+  @@map("notifications")
 }
 
 // ---------------------------------------------------------------------------

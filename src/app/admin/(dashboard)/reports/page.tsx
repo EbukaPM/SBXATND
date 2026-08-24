@@ -10,7 +10,11 @@ export const dynamic = "force-dynamic";
 export default async function ReportsPage() {
   const [offices, employees] = await Promise.all([
     prisma.office.findMany({ orderBy: { name: "asc" } }),
-    prisma.employee.findMany({ orderBy: { firstName: "asc" }, select: { id: true, firstName: true, lastName: true } }),
+    prisma.employee.findMany({
+      where: { isDeleted: false },
+      orderBy: { firstName: "asc" },
+      select: { id: true, firstName: true, lastName: true },
+    }),
   ]);
   const currentMonth = formatInTimeZone(new Date(), "Africa/Lagos", "yyyy-MM");
 

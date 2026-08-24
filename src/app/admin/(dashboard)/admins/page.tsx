@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
 import { NewAdminForm } from "./NewAdminForm";
-import { AdminRow } from "./AdminRow";
+import { AdminRow, AdminActiveToggle } from "./AdminRow";
 import { PageHeader } from "@/components/admin/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,33 @@ export default async function AdminsPage() {
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {admins.map((a) => (
+          <div key={a.id} className="rounded-lg border bg-card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{a.fullName}</p>
+                <p className="truncate text-xs text-muted-foreground">{a.email}</p>
+              </div>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${a.isActive ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}>
+                {a.isActive ? "Active" : "Disabled"}
+              </span>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {a.role.replace("_", " ")} · Last login: {a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString() : "Never"}
+            </p>
+            {a.id !== self?.id ? (
+              <div className="mt-3">
+                <AdminActiveToggle admin={a} />
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/50 text-left text-xs uppercase text-muted-foreground">
             <tr>

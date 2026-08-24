@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { logoutAction } from "@/lib/actions/auth";
+import { NotificationBell } from "@/components/admin/NotificationBell";
 import type { NavItem } from "@/lib/auth/nav";
 import type { User } from "@prisma/client";
 
@@ -13,6 +14,8 @@ interface AdminSidebarProps {
   logoUrl: string | null;
   nav: NavItem[];
   user: User;
+  /** null hides the bell entirely (role can't view notifications). */
+  notificationCount: number | null;
 }
 
 function NavLinks({ nav, pathname, onNavigate }: { nav: NavItem[]; pathname: string; onNavigate?: () => void }) {
@@ -52,36 +55,48 @@ function SidebarFooter({ user }: { user: User }) {
   );
 }
 
-function BrandHeader({ companyName, logoUrl }: { companyName: string; logoUrl: string | null }) {
+function BrandHeader({
+  companyName,
+  logoUrl,
+  notificationCount,
+}: {
+  companyName: string;
+  logoUrl: string | null;
+  notificationCount?: number | null;
+}) {
   return (
     <div className="flex items-center gap-3 border-b p-4">
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt={companyName} className="h-9 w-9 shrink-0 object-contain" />
       ) : null}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate font-semibold">{companyName}</p>
         <p className="text-xs text-muted-foreground">Admin</p>
       </div>
+      {notificationCount !== null && notificationCount !== undefined ? (
+        <NotificationBell initialCount={notificationCount} />
+      ) : null}
     </div>
   );
 }
 
-export function AdminSidebar({ companyName, logoUrl, nav, user }: AdminSidebarProps) {
+export function AdminSidebar({ companyName, logoUrl, nav, user, notificationCount }: AdminSidebarProps) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <>
       {/* Mobile top bar */}
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 md:hidden">
-        <div className="flex min-w-0 items-center gap-2">
+      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-card px-4 md:hidden">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={logoUrl} alt={companyName} className="h-7 w-7 shrink-0 object-contain" />
           ) : null}
           <p className="truncate text-sm font-semibold">{companyName}</p>
         </div>
+        {notificationCount !== null ? <NotificationBell initialCount={notificationCount} /> : null}
         <button
           type="button"
           aria-label={drawerOpen ? "Close menu" : "Open menu"}
@@ -117,7 +132,7 @@ export function AdminSidebar({ companyName, logoUrl, nav, user }: AdminSidebarPr
 
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
-        <BrandHeader companyName={companyName} logoUrl={logoUrl} />
+        <BrandHeader companyName={companyName} logoUrl={logoUrl} notificationCount={notificationCount} />
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           <NavLinks nav={nav} pathname={pathname} />
         </nav>
