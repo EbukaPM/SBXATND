@@ -1,16 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
-import Link from "next/link";
+import { useActionState, useEffect } from "react";
 import { createEmployeeAction, type EmployeeFormState } from "@/lib/actions/employees";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import type { Department, Office } from "@prisma/client";
 
 const initialState: EmployeeFormState = {};
 
 export function NewEmployeeForm({ offices, departments }: { offices: Office[]; departments: Department[] }) {
   const [state, formAction, pending] = useActionState(createEmployeeAction, initialState);
+
+  useEffect(() => {
+    if (state.error) toast({ title: "Couldn't create employee", description: state.error, variant: "destructive" });
+    else if (state.generatedAttendanceId) toast({ title: "Employee created", variant: "success" });
+  }, [state]);
 
   if (state.generatedAttendanceId) {
     return (
@@ -23,11 +28,6 @@ export function NewEmployeeForm({ offices, departments }: { offices: Office[]; d
           This is shown once. Print or share it securely with the employee — it cannot be recovered later, only
           regenerated.
         </p>
-        <div className="mt-4 flex justify-center gap-3">
-          <Link href="/admin/employees" className="text-sm text-primary hover:underline">
-            Back to employees
-          </Link>
-        </div>
       </div>
     );
   }
@@ -65,8 +65,6 @@ export function NewEmployeeForm({ offices, departments }: { offices: Office[]; d
         </div>
         <Field label="Date employed" name="dateEmployed" type="date" />
       </div>
-
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
 
       <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create Employee"}

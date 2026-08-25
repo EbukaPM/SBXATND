@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { setAdminActiveAction } from "@/lib/actions/admins";
+import { toast, toastError } from "@/hooks/use-toast";
 import type { User } from "@prisma/client";
 
 export function AdminActiveToggle({ admin }: { admin: User }) {
@@ -12,7 +13,16 @@ export function AdminActiveToggle({ admin }: { admin: User }) {
       size="sm"
       variant="outline"
       disabled={pending}
-      onClick={() => startTransition(() => setAdminActiveAction(admin.id, !admin.isActive))}
+      onClick={() =>
+        startTransition(async () => {
+          try {
+            await setAdminActiveAction(admin.id, !admin.isActive);
+            toast({ title: admin.isActive ? "Administrator disabled" : "Administrator enabled", variant: "success" });
+          } catch (err) {
+            toastError(err, "Couldn't update administrator");
+          }
+        })
+      }
     >
       {admin.isActive ? "Disable" : "Enable"}
     </Button>

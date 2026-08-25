@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { requestDeleteEmployeeAction } from "@/lib/actions/employees";
+import { toast, toastError } from "@/hooks/use-toast";
 
 export function DeleteEmployeeForm({ employeeId, isSuperAdmin }: { employeeId: string; isSuperAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   if (!open) {
     return (
@@ -19,15 +19,19 @@ export function DeleteEmployeeForm({ employeeId, isSuperAdmin }: { employeeId: s
   }
 
   function submit() {
-    setError(null);
     const formData = new FormData();
     formData.set("reason", reason);
     startTransition(async () => {
       try {
         await requestDeleteEmployeeAction(employeeId, formData);
         setOpen(false);
+        toast({
+          title: isSuperAdmin ? "Employee deleted" : "Deletion request submitted",
+          description: isSuperAdmin ? undefined : "A Super Admin will review it.",
+          variant: isSuperAdmin ? "destructive" : "success",
+        });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+        toastError(err, "Couldn't submit");
       }
     });
   }
@@ -46,7 +50,6 @@ export function DeleteEmployeeForm({ employeeId, isSuperAdmin }: { employeeId: s
         placeholder="Reason for deletion (required)"
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
       <div className="flex gap-2">
         <Button
           size="sm"

@@ -12,7 +12,7 @@ export default async function NewEmployeePage() {
 
   return (
     <>
-      <PageHeader>
+      <PageHeader backHref="/admin/employees" backLabel="Back to employees">
         <h1 className="text-2xl font-bold">Add Employee</h1>
       </PageHeader>
       <div className="space-y-6 px-4 py-6 sm:px-6 md:px-8">

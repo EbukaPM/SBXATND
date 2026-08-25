@@ -1,4 +1,5 @@
 import { getCompanySettings } from "@/lib/company/settings";
+import { ThemeToggle } from "@/components/admin/ThemeToggle";
 import { LoginForm } from "./LoginForm";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +8,10 @@ export default async function AdminLoginPage() {
   const company = await getCompanySettings();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted px-6">
+    <div className="relative flex min-h-screen items-center justify-center bg-muted px-6">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-sm">
         <div className="mb-6 text-center">
           {company.logoUrl ? (

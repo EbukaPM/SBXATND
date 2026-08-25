@@ -23,7 +23,7 @@ export default async function AttendanceCorrectionPage({ params }: { params: Pro
 
   return (
     <>
-      <PageHeader>
+      <PageHeader backHref="/admin/attendance" backLabel="Back to attendance">
         <h1 className="text-2xl font-bold">
           {record.employee.firstName} {record.employee.lastName} — {record.attendanceDate.toISOString().slice(0, 10)}
         </h1>

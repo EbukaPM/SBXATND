@@ -3,22 +3,25 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { reviewDeletionRequestAction } from "@/lib/actions/employees";
+import { toast, toastError } from "@/hooks/use-toast";
 
 export function ReviewDeletionForm({ requestId }: { requestId: string }) {
   const [note, setNote] = useState("");
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
 
   function review(decision: "APPROVE" | "REJECT") {
-    setError(null);
     const formData = new FormData();
     formData.set("decision", decision);
     formData.set("note", note);
     startTransition(async () => {
       try {
         await reviewDeletionRequestAction(requestId, formData);
+        toast({
+          title: decision === "APPROVE" ? "Deletion approved" : "Request rejected",
+          variant: decision === "APPROVE" ? "destructive" : "success",
+        });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong.");
+        toastError(err, "Couldn't review request");
       }
     });
   }
@@ -31,7 +34,6 @@ export function ReviewDeletionForm({ requestId }: { requestId: string }) {
         placeholder="Note (optional)"
         className="h-9 rounded-md border border-input bg-background px-2 text-sm"
       />
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
       <div className="flex gap-2">
         <Button size="sm" variant="destructive" disabled={pending} onClick={() => review("APPROVE")} className="flex-1">
           Approve delete

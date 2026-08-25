@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { createHolidayAction, deleteHolidayAction } from "@/lib/actions/holidays";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { CreateHolidayForm, DeleteHolidayButton } from "./HolidayActions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,23 +22,7 @@ export default async function HolidaysPage() {
           <CardTitle>Add holiday</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createHolidayAction} className="flex flex-wrap items-end gap-2">
-            <div className="w-full sm:w-56">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
-              <Input name="name" required className="h-9 w-full" placeholder="Independence Day" />
-            </div>
-            <div className="w-full sm:w-40">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
-              <Input type="date" name="date" required className="h-9 w-full" />
-            </div>
-            <div className="w-full sm:w-64">
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Description</label>
-              <Input name="description" className="h-9 w-full" />
-            </div>
-            <Button type="submit" size="sm" className="w-full sm:w-auto">
-              Add
-            </Button>
-          </form>
+          <CreateHolidayForm />
         </CardContent>
       </Card>
 
@@ -53,11 +35,7 @@ export default async function HolidaysPage() {
               <p className="text-xs text-muted-foreground">{h.date.toISOString().slice(0, 10)}</p>
               {h.description ? <p className="mt-1 text-sm text-muted-foreground">{h.description}</p> : null}
             </div>
-            <form action={deleteHolidayAction.bind(null, h.id)} className="shrink-0">
-              <button type="submit" className="text-sm text-red-600 hover:underline">
-                Delete
-              </button>
-            </form>
+            <DeleteHolidayButton holidayId={h.id} className="shrink-0 text-sm text-red-600 hover:underline" />
           </div>
         ))}
         {holidays.length === 0 ? (
@@ -85,11 +63,7 @@ export default async function HolidaysPage() {
                 <td className="px-4 py-2">{h.name}</td>
                 <td className="px-4 py-2">{h.description ?? "—"}</td>
                 <td className="px-4 py-2 text-right">
-                  <form action={deleteHolidayAction.bind(null, h.id)}>
-                    <button type="submit" className="text-red-600 hover:underline">
-                      Delete
-                    </button>
-                  </form>
+                  <DeleteHolidayButton holidayId={h.id} />
                 </td>
               </tr>
             ))}

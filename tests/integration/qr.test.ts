@@ -38,7 +38,7 @@ describeIfDb("QR lifecycle — integration", () => {
     const today = getAttendanceDateKey(new Date(), TZ);
     const { rawToken } = await generateDailyQr({ officeId, attendanceDate: today, timezone: TZ, generatedById: userId });
 
-    const result = await validateQrToken(rawToken, TZ);
+    const result = await validateQrToken(rawToken);
     expect(result.ok).toBe(true);
   });
 
@@ -51,9 +51,58 @@ describeIfDb("QR lifecycle — integration", () => {
       generatedById: userId,
     });
 
-    const result = await validateQrToken(rawToken, TZ);
+    const result = await validateQrToken(rawToken);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe("WRONG_DATE");
+    if (!result.ok) expect(result.reason).toBe("EXPIRED");
+  });
+
+  it("stays valid across every day of a week-long QR", async () => {
+    const today = getAttendanceDateKey(new Date(), TZ);
+    const weekFromNow = getAttendanceDateKey(new Date(Date.now() + 6 * 86_400_000), TZ);
+    const { rawToken } = await generateDailyQr({
+      officeId,
+      attendanceDate: today,
+      validUntilDate: weekFromNow,
+      timezone: TZ,
+      generatedById: userId,
+    });
+
+    const result = await validateQrToken(rawToken);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.qrCode.attendanceDate.getTime()).toBe(today.getTime());
+      expect(result.qrCode.validUntil.getTime()).toBeGreaterThan(today.getTime());
+    }
+  });
+
+  it("a new QR deactivates a prior QR whose window it overlaps, even with a different start date", async () => {
+    const yesterday = getAttendanceDateKey(new Date(Date.now() - 86_400_000), TZ);
+    const today = getAttendanceDateKey(new Date(), TZ);
+    const weekFromYesterday = getAttendanceDateKey(new Date(Date.now() - 86_400_000 + 6 * 86_400_000), TZ);
+
+    // Started yesterday, runs a week — still covers "now".
+    const first = await generateDailyQr({
+      officeId,
+      attendanceDate: yesterday,
+      validUntilDate: weekFromYesterday,
+      timezone: TZ,
+      generatedById: userId,
+    });
+    // Starts today (a different day than `first` started), but its window still
+    // overlaps `first`'s multi-day range.
+    const second = await generateDailyQr({
+      officeId,
+      attendanceDate: today,
+      timezone: TZ,
+      generatedById: userId,
+    });
+
+    const firstResult = await validateQrToken(first.rawToken);
+    expect(firstResult.ok).toBe(false);
+    if (!firstResult.ok) expect(firstResult.reason).toBe("DEACTIVATED");
+
+    const secondResult = await validateQrToken(second.rawToken);
+    expect(secondResult.ok).toBe(true);
   });
 
   it("rejects a deactivated QR", async () => {
@@ -66,7 +115,7 @@ describeIfDb("QR lifecycle — integration", () => {
     });
     await deactivateQr(qrCode.id, userId);
 
-    const result = await validateQrToken(rawToken, TZ);
+    const result = await validateQrToken(rawToken);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("DEACTIVATED");
   });
@@ -76,16 +125,16 @@ describeIfDb("QR lifecycle — integration", () => {
     const first = await generateDailyQr({ officeId, attendanceDate: today, timezone: TZ, generatedById: userId });
     const second = await generateDailyQr({ officeId, attendanceDate: today, timezone: TZ, generatedById: userId });
 
-    const firstResult = await validateQrToken(first.rawToken, TZ);
+    const firstResult = await validateQrToken(first.rawToken);
     expect(firstResult.ok).toBe(false);
     if (!firstResult.ok) expect(firstResult.reason).toBe("DEACTIVATED");
 
-    const secondResult = await validateQrToken(second.rawToken, TZ);
+    const secondResult = await validateQrToken(second.rawToken);
     expect(secondResult.ok).toBe(true);
   });
 
   it("rejects a token that never existed", async () => {
-    const result = await validateQrToken("not-a-real-token", TZ);
+    const result = await validateQrToken("not-a-real-token");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe("NOT_FOUND");
   });

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { regenerateAttendanceIdAction } from "@/lib/actions/employees";
+import { toast, toastError } from "@/hooks/use-toast";
 
 export function RegenerateIdButton({ employeeId, disabled }: { employeeId: string; disabled?: boolean }) {
   const [pending, startTransition] = useTransition();
@@ -29,9 +30,14 @@ export function RegenerateIdButton({ employeeId, disabled }: { employeeId: strin
           disabled={pending}
           onClick={() =>
             startTransition(async () => {
-              const r = await regenerateAttendanceIdAction(employeeId);
-              setNewId(r.attendanceId);
-              setConfirming(false);
+              try {
+                const r = await regenerateAttendanceIdAction(employeeId);
+                setNewId(r.attendanceId);
+                setConfirming(false);
+                toast({ title: "Attendance ID regenerated", variant: "success" });
+              } catch (err) {
+                toastError(err, "Couldn't regenerate ID");
+              }
             })
           }
         >

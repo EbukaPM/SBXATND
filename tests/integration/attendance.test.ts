@@ -38,6 +38,8 @@ describeIfDb("recordAttendance — integration", () => {
   afterAll(async () => {
     await prisma.attendanceDeviceFlag.deleteMany({ where: { attendanceRecord: { officeId } } });
     await prisma.attendanceRecord.deleteMany({ where: { officeId } });
+    await prisma.qrAttendanceSession.deleteMany({ where: { officeId } });
+    await prisma.attendanceQrCode.deleteMany({ where: { officeId } });
     await prisma.employee.deleteMany({ where: { officeId } });
     await prisma.officeNetwork.deleteMany({ where: { officeId } });
     await prisma.office.delete({ where: { id: officeId } });
@@ -240,6 +242,65 @@ describeIfDb("recordAttendance — integration", () => {
         where: { OR: [{ employeeId: a.employee.id }, { employeeId: b.employee.id }] },
       });
       expect(flags).toBe(0);
+    });
+  });
+
+  describeIfDb("QR_ONLY mode", () => {
+    beforeAll(async () => {
+      await updateAttendanceSettings({
+        timezone: TZ,
+        workStart: "09:00",
+        gracePeriodMinutes: 15,
+        workEnd: "17:00",
+        attendanceMode: "QR_ONLY",
+      });
+    });
+
+    afterAll(async () => {
+      await updateAttendanceSettings({
+        timezone: TZ,
+        workStart: "09:00",
+        gracePeriodMinutes: 15,
+        workEnd: "17:00",
+        attendanceMode: "NETWORK_ONLY",
+      });
+    });
+
+    it("clocks in with a valid QR session and no office network configured at all", async () => {
+      // Deliberately no OfficeNetwork row exists for this office — QR_ONLY must
+      // never fall back to requiring one.
+      const { attendanceId } = await makeEmployee();
+      const { generateDailyQr } = await import("@/lib/qr/manage");
+      const { startQrSession } = await import("@/lib/qr/session");
+      const { getAttendanceDateKey } = await import("@/lib/attendance/rules");
+
+      const today = getAttendanceDateKey(new Date(), TZ);
+      const { qrCode } = await generateDailyQr({ officeId, attendanceDate: today, timezone: TZ, generatedById: userId });
+      const session = await startQrSession({ qrCode, sourceIp: "41.58.0.99", userAgent: "vitest" });
+
+      const result = await recordAttendance({
+        attendanceIdRaw: attendanceId,
+        sourceIp: "41.58.0.99", // an IP nowhere near any office network — must not matter
+        userAgent: "vitest",
+        qrSessionToken: session.sessionToken,
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.action).toBe("CLOCK_IN");
+        expect(result.record.verificationMethod).toBe("QR_ONLY");
+      }
+    });
+
+    it("denies clock-in without a QR session even though no network is required", async () => {
+      const { attendanceId } = await makeEmployee();
+      const result = await recordAttendance({
+        attendanceIdRaw: attendanceId,
+        sourceIp: "41.58.0.99",
+        userAgent: "vitest",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.reason).toBe("QR_REQUIRED");
     });
   });
 });

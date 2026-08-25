@@ -7,10 +7,13 @@ import { getCompanySettings } from "@/lib/company/settings";
 import { recordAuditLog } from "@/lib/audit/log";
 import type { AttendanceQrCode } from "@prisma/client";
 
-function dayBounds(dateKey: Date, timezone: string) {
-  const ymd = formatInTimeZone(dateKey, "UTC", "yyyy-MM-dd");
-  const validFrom = fromZonedTime(`${ymd}T00:00:00`, timezone);
-  const validUntil = fromZonedTime(`${ymd}T23:59:59.999`, timezone);
+/** validFrom = start of startDateKey; validUntil = end of endDateKey. Passing the
+ * same key for both (the common case) yields the original single-day window. */
+function rangeBounds(startDateKey: Date, endDateKey: Date, timezone: string) {
+  const startYmd = formatInTimeZone(startDateKey, "UTC", "yyyy-MM-dd");
+  const endYmd = formatInTimeZone(endDateKey, "UTC", "yyyy-MM-dd");
+  const validFrom = fromZonedTime(`${startYmd}T00:00:00`, timezone);
+  const validUntil = fromZonedTime(`${endYmd}T23:59:59.999`, timezone);
   return { validFrom, validUntil };
 }
 
@@ -22,7 +25,10 @@ function computeStatus(validFrom: Date, validUntil: Date, now: Date): "SCHEDULED
 
 export interface GenerateQrParams {
   officeId: string;
-  attendanceDate: Date; // UTC-midnight date key
+  attendanceDate: Date; // UTC-midnight date key — start of the validity window
+  /** End of the validity window (inclusive, UTC-midnight date key). Defaults to
+   * attendanceDate for a single-day QR. */
+  validUntilDate?: Date;
   timezone: string;
   generatedById: string;
   actorIp?: string | null;
@@ -33,17 +39,24 @@ export interface GenerateQrResult {
   rawToken: string;
 }
 
-/** Generates (or regenerates) the QR code for an office/day, deactivating any prior live code. */
+/** Generates (or regenerates) the QR code for an office over a date range (a single day by
+ * default), deactivating any prior live code whose window overlaps the new one. */
 export async function generateDailyQr(params: GenerateQrParams): Promise<GenerateQrResult> {
-  const { officeId, attendanceDate, timezone, generatedById, actorIp } = params;
-  const { validFrom, validUntil } = dayBounds(attendanceDate, timezone);
+  const { officeId, attendanceDate, generatedById, actorIp } = params;
+  const timezone = params.timezone;
+  const validUntilDate = params.validUntilDate ?? attendanceDate;
+  const { validFrom, validUntil } = rangeBounds(attendanceDate, validUntilDate, timezone);
   const now = new Date();
   const { rawToken, tokenHash, tokenIdentifier } = generateQrToken();
 
   const qrCode = await prisma.$transaction(async (tx) => {
-    const existingLive = await tx.attendanceQrCode.findMany({
-      where: { officeId, attendanceDate, status: { in: ["SCHEDULED", "ACTIVE"] } },
+    // Overlap check, not exact-match: a new range deactivates any existing live QR
+    // whose window intersects it at all (attendanceDate <= our end AND its own
+    // validUntil >= our start), covering single-day and multi-day ranges alike.
+    const candidates = await tx.attendanceQrCode.findMany({
+      where: { officeId, status: { in: ["SCHEDULED", "ACTIVE"] }, attendanceDate: { lte: validUntilDate } },
     });
+    const existingLive = candidates.filter((qr) => qr.validUntil >= validFrom);
 
     for (const old of existingLive) {
       await tx.attendanceQrCode.update({
@@ -107,6 +120,7 @@ async function renderAndStoreQrArtifacts(qrCode: AttendanceQrCode, rawToken: str
       logoUrl: company.logoUrl,
       officeName: office.name,
       attendanceDate: qrCode.attendanceDate,
+      validUntil: qrCode.validUntil,
       timezone: office.timezone,
       rawToken,
       appUrl,

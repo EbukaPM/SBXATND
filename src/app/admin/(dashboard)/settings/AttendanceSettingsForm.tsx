@@ -4,16 +4,25 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateAttendanceSettingsAction } from "@/lib/actions/settings";
+import { toast, toastError } from "@/hooks/use-toast";
 import type { AttendanceSettings } from "@prisma/client";
 
 export function AttendanceSettingsForm({ settings }: { settings: AttendanceSettings }) {
   const [pending, startTransition] = useTransition();
 
+  function submit(fd: FormData) {
+    startTransition(async () => {
+      try {
+        await updateAttendanceSettingsAction(fd);
+        toast({ title: "Attendance settings saved", variant: "success" });
+      } catch (err) {
+        toastError(err, "Couldn't save settings");
+      }
+    });
+  }
+
   return (
-    <form
-      action={(fd) => startTransition(() => updateAttendanceSettingsAction(fd))}
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
-    >
+    <form action={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
       <div>
         <label className="mb-1 block text-sm font-medium">Timezone</label>
         <Input name="timezone" defaultValue={settings.timezone} />

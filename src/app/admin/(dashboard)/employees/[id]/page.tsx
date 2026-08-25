@@ -1,11 +1,9 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { requireUser } from "@/lib/auth/guard";
-import { updateEmployeeAction } from "@/lib/actions/employees";
+import { EditEmployeeForm } from "./EditEmployeeForm";
 import { RegenerateIdButton } from "./RegenerateIdButton";
 import { StatusButtons } from "./StatusButtons";
 import { DeleteEmployeeForm } from "./DeleteEmployeeForm";
@@ -36,12 +34,11 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
   if (!employee) notFound();
 
-  const updateWithId = updateEmployeeAction.bind(null, employee.id);
   const pendingDeletion = latestDeletionRequest?.status === "PENDING" ? latestDeletionRequest : null;
 
   return (
     <>
-      <PageHeader>
+      <PageHeader backHref="/admin/employees" backLabel="Back to employees">
         <h1 className="text-2xl font-bold">
           {employee.firstName} {employee.lastName}
         </h1>
@@ -77,52 +74,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             <CardTitle>Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={updateWithId} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="First name" name="firstName" defaultValue={employee.firstName} required />
-              <Field label="Last name" name="lastName" defaultValue={employee.lastName} required />
-              <Field label="Middle name" name="middleName" defaultValue={employee.middleName ?? ""} />
-              <Field label="Email" name="email" defaultValue={employee.email ?? ""} type="email" />
-              <Field label="Phone" name="phone" defaultValue={employee.phone ?? ""} />
-              <Field label="Job title" name="jobTitle" defaultValue={employee.jobTitle ?? ""} />
-              <div>
-                <label className="mb-1 block text-sm font-medium">Office</label>
-                <select
-                  name="officeId"
-                  defaultValue={employee.officeId}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  {offices.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Department</label>
-                <select
-                  name="departmentId"
-                  defaultValue={employee.departmentId ?? ""}
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="">None</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Field
-                label="Date employed"
-                name="dateEmployed"
-                type="date"
-                defaultValue={employee.dateEmployed ? employee.dateEmployed.toISOString().slice(0, 10) : ""}
-              />
-              <div className="col-span-2">
-                <Button type="submit">Save changes</Button>
-              </div>
-            </form>
+            <EditEmployeeForm employee={employee} offices={offices} departments={departments} />
           </CardContent>
         </Card>
 
@@ -215,28 +167,5 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </Card>
       </div>
     </>
-  );
-}
-
-function Field({
-  label,
-  name,
-  type = "text",
-  defaultValue,
-  required,
-}: {
-  label: string;
-  name: string;
-  type?: string;
-  defaultValue?: string;
-  required?: boolean;
-}) {
-  return (
-    <div>
-      <label htmlFor={name} className="mb-1 block text-sm font-medium">
-        {label}
-      </label>
-      <Input id={name} name={name} type={type} defaultValue={defaultValue} required={required} />
-    </div>
   );
 }

@@ -40,17 +40,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b1120;
-    --foreground: #e2e8f0;
-    --card: #111827;
-    --card-foreground: #e2e8f0;
-    --muted: #1f2937;
-    --muted-foreground: #94a3b8;
-    --border: #1f2937;
-    --input: #1f2937;
-  }
+/* Night mode. Applied via a `.dark` class on <html> (next-themes, attribute="class"),
+ * not a `prefers-color-scheme` media query — that only covers OS-level default, this
+ * also supports an explicit user toggle. Brand colors (--primary/--secondary/--accent
+ * and their *-foreground pairs, plus --ring) are deliberately left alone here: they're
+ * always driven by CompanySettings via BrandStyle.tsx in both themes. */
+.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --card-foreground: #e2e8f0;
+  --muted: #1f2937;
+  --muted-foreground: #94a3b8;
+  --border: #1f2937;
+  --input: #1f2937;
 }
 
 body {

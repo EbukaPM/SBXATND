@@ -2,32 +2,24 @@ import { randomBytes, createHash } from "crypto";
 import { prisma } from "@/lib/db/prisma";
 import { hashQrToken } from "./token";
 import { getAttendanceSettings } from "@/lib/attendance/settings";
-import { getAttendanceDateKey } from "@/lib/attendance/rules";
 import type { AttendanceQrCode } from "@prisma/client";
 
-export type QrValidationFailure =
-  | "NOT_FOUND"
-  | "DEACTIVATED"
-  | "EXPIRED"
-  | "NOT_YET_ACTIVE"
-  | "WRONG_DATE";
+export type QrValidationFailure = "NOT_FOUND" | "DEACTIVATED" | "EXPIRED" | "NOT_YET_ACTIVE";
 
 export type QrValidationResult =
   | { ok: true; qrCode: AttendanceQrCode }
   | { ok: false; reason: QrValidationFailure };
 
-/** Looks up and validates a raw QR token from a scanned URL. */
-export async function validateQrToken(rawToken: string, timezone: string): Promise<QrValidationResult> {
+/** Looks up and validates a raw QR token from a scanned URL. Validity is purely the
+ * [validFrom, validUntil] window — a QR generated to cover a week or month stays
+ * valid across every day in that range, not just the day it was generated for. */
+export async function validateQrToken(rawToken: string): Promise<QrValidationResult> {
   const tokenHash = hashQrToken(rawToken);
   const qrCode = await prisma.attendanceQrCode.findUnique({ where: { tokenHash } });
   if (!qrCode) return { ok: false, reason: "NOT_FOUND" };
   if (qrCode.status === "DEACTIVATED") return { ok: false, reason: "DEACTIVATED" };
 
   const now = new Date();
-  const todayKey = getAttendanceDateKey(now, timezone).getTime();
-  const qrDateKey = getAttendanceDateKey(qrCode.attendanceDate, timezone).getTime();
-
-  if (qrDateKey !== todayKey) return { ok: false, reason: "WRONG_DATE" };
   if (now < qrCode.validFrom) return { ok: false, reason: "NOT_YET_ACTIVE" };
   if (now > qrCode.validUntil || qrCode.status === "EXPIRED") return { ok: false, reason: "EXPIRED" };
 

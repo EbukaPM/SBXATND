@@ -1,11 +1,9 @@
 import { prisma } from "@/lib/db/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { generateQrAction, deactivateQrAction } from "@/lib/actions/qr";
 import { getAttendanceSettings } from "@/lib/attendance/settings";
 import { formatInTimeZone } from "date-fns-tz";
 import { PageHeader } from "@/components/admin/PageHeader";
+import { GenerateQrForm, DeactivateQrButton } from "./QrActions";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +13,12 @@ const STATUS_STYLES: Record<string, string> = {
   EXPIRED: "bg-gray-200 text-gray-700",
   DEACTIVATED: "bg-red-100 text-red-700",
 };
+
+function dateRangeLabel(qr: { attendanceDate: Date; validUntil: Date }): string {
+  const start = qr.attendanceDate.toISOString().slice(0, 10);
+  const end = qr.validUntil.toISOString().slice(0, 10);
+  return start === end ? start : `${start} – ${end}`;
+}
 
 export default async function QrPage() {
   const [offices, qrCodes, settings] = await Promise.all([
@@ -48,25 +52,7 @@ export default async function QrPage() {
           <CardTitle>Generate QR</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={generateQrAction} className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Office</label>
-              <select name="officeId" required className="h-9 rounded-md border border-input bg-background px-2 text-sm">
-                {offices.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Date</label>
-              <Input type="date" name="date" defaultValue={todayStr} className="h-9 w-40" />
-            </div>
-            <Button type="submit" size="sm">
-              Generate / Regenerate
-            </Button>
-          </form>
+          <GenerateQrForm offices={offices} todayStr={todayStr} />
           {offices.length === 0 ? (
             <p className="mt-2 text-sm text-amber-700">Create an office first.</p>
           ) : null}
@@ -80,7 +66,7 @@ export default async function QrPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-medium">{qr.office.name}</p>
-                <p className="text-xs text-muted-foreground">{qr.attendanceDate.toISOString().slice(0, 10)}</p>
+                <p className="text-xs text-muted-foreground">{dateRangeLabel(qr)}</p>
               </div>
               <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[qr.status]}`}>
                 {qr.status}
@@ -99,11 +85,7 @@ export default async function QrPage() {
                 </a>
               ) : null}
               {qr.status === "ACTIVE" || qr.status === "SCHEDULED" ? (
-                <form action={deactivateQrAction.bind(null, qr.id)}>
-                  <button type="submit" className="text-sm text-red-600 hover:underline">
-                    Deactivate
-                  </button>
-                </form>
+                <DeactivateQrButton qrId={qr.id} className="text-sm text-red-600 hover:underline" />
               ) : null}
             </div>
           </div>
@@ -131,7 +113,7 @@ export default async function QrPage() {
             {qrCodes.map((qr) => (
               <tr key={qr.id} className="border-b last:border-0">
                 <td className="px-4 py-2">{qr.office.name}</td>
-                <td className="px-4 py-2">{qr.attendanceDate.toISOString().slice(0, 10)}</td>
+                <td className="px-4 py-2">{dateRangeLabel(qr)}</td>
                 <td className="px-4 py-2">
                   <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[qr.status]}`}>
                     {qr.status}
@@ -150,13 +132,7 @@ export default async function QrPage() {
                         PDF
                       </a>
                     ) : null}
-                    {qr.status === "ACTIVE" || qr.status === "SCHEDULED" ? (
-                      <form action={deactivateQrAction.bind(null, qr.id)}>
-                        <button type="submit" className="text-red-600 hover:underline">
-                          Deactivate
-                        </button>
-                      </form>
-                    ) : null}
+                    {qr.status === "ACTIVE" || qr.status === "SCHEDULED" ? <DeactivateQrButton qrId={qr.id} /> : null}
                   </div>
                 </td>
               </tr>

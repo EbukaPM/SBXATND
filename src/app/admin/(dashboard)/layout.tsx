@@ -4,6 +4,7 @@ import { getCompanySettings } from "@/lib/company/settings";
 import { visibleNavItems } from "@/lib/auth/nav";
 import { hasPermission } from "@/lib/auth/rbac";
 import { getUnreadNotificationCount } from "@/lib/notifications/query";
+import { Toaster } from "@/components/ui/toaster";
 import { AdminSidebar } from "./AdminSidebar";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
         <div className="h-14 md:hidden" />
         {children}
       </main>
+      <Toaster />
     </div>
   );
 }

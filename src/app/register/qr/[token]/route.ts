@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIp } from "@/lib/network/getClientIp";
-import { getAttendanceSettings } from "@/lib/attendance/settings";
 import { validateQrToken, startQrSession } from "@/lib/qr/session";
 import { QR_SESSION_COOKIE } from "@/lib/attendance/clockHandler";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rateLimit";
@@ -23,8 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.redirect(new URL("/register?error=rate_limited", request.url));
   }
 
-  const settings = await getAttendanceSettings();
-  const validation = await validateQrToken(token, settings.timezone);
+  const validation = await validateQrToken(token);
 
   if (!validation.ok) {
     return NextResponse.redirect(new URL(`/register?error=qr_${validation.reason.toLowerCase()}`, request.url));

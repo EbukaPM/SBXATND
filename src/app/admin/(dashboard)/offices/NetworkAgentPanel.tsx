@@ -9,6 +9,7 @@ import {
   setNetworkFailModeAction,
   authorizeCurrentNetworkAction,
 } from "@/lib/actions/offices";
+import { toast, toastError } from "@/hooks/use-toast";
 import type { OfficeNetwork } from "@prisma/client";
 
 function TokenReveal({ agentId, token, onClose }: { agentId: string; token: string; onClose: () => void }) {
@@ -50,10 +51,15 @@ export function CreateNetworkForm({ officeId }: { officeId: string }) {
     fd.set("cidr", cidr);
     fd.set("failMode", failMode);
     startTransition(async () => {
-      const result = await createOfficeNetworkAction(fd);
-      setRevealed({ agentId: result.agentId, token: result.registrationToken });
-      setName("");
-      setCidr("");
+      try {
+        const result = await createOfficeNetworkAction(fd);
+        setRevealed({ agentId: result.agentId, token: result.registrationToken });
+        setName("");
+        setCidr("");
+        toast({ title: "Network registered", variant: "success" });
+      } catch (err) {
+        toastError(err, "Couldn't register network");
+      }
     });
   }
 
@@ -174,8 +180,10 @@ export function NetworkRow({ network }: { network: OfficeNetwork }) {
                   try {
                     const r = await authorizeCurrentNetworkAction(network.id);
                     setManualResult(r);
+                    toast({ title: "Network authorized", variant: "success" });
                   } catch (err) {
                     setManualResult({ error: err instanceof Error ? err.message : "Could not authorize." });
+                    toastError(err, "Couldn't authorize network");
                   } finally {
                     setConfirmingManual(false);
                   }
@@ -200,8 +208,13 @@ export function NetworkRow({ network }: { network: OfficeNetwork }) {
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
-                const r = await regenerateNetworkTokenAction(network.id);
-                setRevealedToken(r.registrationToken);
+                try {
+                  const r = await regenerateNetworkTokenAction(network.id);
+                  setRevealedToken(r.registrationToken);
+                  toast({ title: "Agent token regenerated", variant: "success" });
+                } catch (err) {
+                  toastError(err, "Couldn't regenerate token");
+                }
               })
             }
           >
@@ -211,7 +224,16 @@ export function NetworkRow({ network }: { network: OfficeNetwork }) {
             size="sm"
             variant="outline"
             disabled={pending}
-            onClick={() => startTransition(() => setNetworkEnabledAction(network.id, network.status === "DISABLED"))}
+            onClick={() =>
+              startTransition(async () => {
+                try {
+                  await setNetworkEnabledAction(network.id, network.status === "DISABLED");
+                  toast({ title: network.status === "DISABLED" ? "Network enabled" : "Network disabled", variant: "success" });
+                } catch (err) {
+                  toastError(err, "Couldn't update network");
+                }
+              })
+            }
           >
             {network.status === "DISABLED" ? "Enable" : "Disable"}
           </Button>
@@ -220,9 +242,14 @@ export function NetworkRow({ network }: { network: OfficeNetwork }) {
             variant="outline"
             disabled={pending}
             onClick={() =>
-              startTransition(() =>
-                setNetworkFailModeAction(network.id, network.failMode === "FAIL_CLOSED" ? "FAIL_OPEN" : "FAIL_CLOSED")
-              )
+              startTransition(async () => {
+                try {
+                  await setNetworkFailModeAction(network.id, network.failMode === "FAIL_CLOSED" ? "FAIL_OPEN" : "FAIL_CLOSED");
+                  toast({ title: "Fail mode updated", variant: "success" });
+                } catch (err) {
+                  toastError(err, "Couldn't update fail mode");
+                }
+              })
             }
           >
             Switch to {network.failMode === "FAIL_CLOSED" ? "FAIL_OPEN" : "FAIL_CLOSED"}

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
 import { logoutAction } from "@/lib/actions/auth";
 import { NotificationBell } from "@/components/admin/NotificationBell";
+import { ThemeToggle } from "@/components/admin/ThemeToggle";
 import type { NavItem } from "@/lib/auth/nav";
 import type { User } from "@prisma/client";
 
@@ -74,6 +75,7 @@ function BrandHeader({
         <p className="truncate font-semibold">{companyName}</p>
         <p className="text-xs text-muted-foreground">Admin</p>
       </div>
+      <ThemeToggle />
       {notificationCount !== null && notificationCount !== undefined ? (
         <NotificationBell initialCount={notificationCount} />
       ) : null}
@@ -96,6 +98,7 @@ export function AdminSidebar({ companyName, logoUrl, nav, user, notificationCoun
           ) : null}
           <p className="truncate text-sm font-semibold">{companyName}</p>
         </div>
+        <ThemeToggle />
         {notificationCount !== null ? <NotificationBell initialCount={notificationCount} /> : null}
         <button
           type="button"

@@ -56,11 +56,24 @@ vars each needs):
 ### Migrating existing files off Netlify Blobs
 
 If you have real data already in Netlify Blobs (uploaded logos, employee photos,
-generated QR PDFs/PNGs) and want to preserve them, they need a one-time copy to the
-new backend before cutover — Netlify Blobs isn't reachable once the site is gone.
-This isn't scripted yet since it depends on how much you have stored; ask if you
-want a migration script written against the `netlify` and `s3`/`local` drivers
-directly.
+generated QR PDFs/PNGs) and want to preserve them, run `scripts/migrate-blobs-to-s3.ts`
+before cutover — Netlify Blobs isn't reachable once the site is gone. It's read-only
+against Netlify Blobs (nothing is deleted from the source) and safe to re-run:
+
+```bash
+# Preview what would be copied, without writing anything:
+NETLIFY_SITE_ID=... NETLIFY_BLOBS_TOKEN=... npm run migrate:blobs-to-s3 -- --dry-run
+
+# Actually copy everything to S3/MinIO:
+NETLIFY_SITE_ID=... NETLIFY_BLOBS_TOKEN=... \
+S3_BUCKET=... S3_ACCESS_KEY_ID=... S3_SECRET_ACCESS_KEY=... [S3_ENDPOINT=...] \
+npm run migrate:blobs-to-s3
+```
+
+`NETLIFY_SITE_ID`/`NETLIFY_BLOBS_TOKEN` come from Netlify → Site settings → General
+(Site ID) and a Personal Access Token (User settings → OAuth applications). Only
+after spot-checking a few migrated files (the company logo is a good one) load
+correctly should you flip `STORAGE_DRIVER=s3` in the running app's environment.
 
 ## 3. Scheduled jobs
 

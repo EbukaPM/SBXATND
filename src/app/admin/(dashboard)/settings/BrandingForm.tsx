@@ -1,15 +1,21 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { updateBrandingAction, type BrandingState } from "@/lib/actions/settings";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import type { CompanySettings } from "@prisma/client";
 
 const initialState: BrandingState = {};
 
 export function BrandingForm({ company }: { company: CompanySettings }) {
   const [state, formAction, pending] = useActionState(updateBrandingAction, initialState);
+
+  useEffect(() => {
+    if (state.error) toast({ title: "Couldn't save branding", description: state.error, variant: "destructive" });
+    else if (state.success) toast({ title: "Branding updated", variant: "success" });
+  }, [state]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -48,8 +54,6 @@ export function BrandingForm({ company }: { company: CompanySettings }) {
           <Input name="website" defaultValue={company.website ?? ""} />
         </div>
       </div>
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-green-700">Branding updated.</p> : null}
       <Button type="submit" disabled={pending}>
         {pending ? "Saving…" : "Save branding"}
       </Button>

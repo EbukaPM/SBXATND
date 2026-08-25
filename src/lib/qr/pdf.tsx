@@ -63,6 +63,8 @@ export interface GenerateQrPdfParams {
   logoUrl?: string | null;
   officeName: string;
   attendanceDate: Date;
+  /** When this is a different calendar day than attendanceDate, the label shows a range. */
+  validUntil: Date;
   timezone: string;
   rawToken: string;
   appUrl: string;
@@ -84,7 +86,12 @@ export async function generateQrPdf(params: GenerateQrPdfParams): Promise<Buffer
   const qrUrl = buildQrUrl(params.appUrl, params.rawToken);
   const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 640, margin: 1 });
   const logoDataUrl = params.logoUrl ? await fetchAsDataUrl(params.logoUrl) : null;
-  const dateLabel = formatInTimeZone(params.attendanceDate, params.timezone, "EEEE, d MMMM yyyy");
+  const startYmd = formatInTimeZone(params.attendanceDate, params.timezone, "yyyy-MM-dd");
+  const endYmd = formatInTimeZone(params.validUntil, params.timezone, "yyyy-MM-dd");
+  const dateLabel =
+    startYmd === endYmd
+      ? formatInTimeZone(params.attendanceDate, params.timezone, "EEEE, d MMMM yyyy")
+      : `Valid ${formatInTimeZone(params.attendanceDate, params.timezone, "d MMM")} – ${formatInTimeZone(params.validUntil, params.timezone, "d MMM yyyy")}`;
 
   const doc = (
     <QrPdfDocument

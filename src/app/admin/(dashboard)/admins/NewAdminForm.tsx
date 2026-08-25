@@ -1,18 +1,28 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { createAdminAction, type CreateAdminState } from "@/lib/actions/admins";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 const initialState: CreateAdminState = {};
 
 export function NewAdminForm() {
   const [state, formAction, pending] = useActionState(createAdminAction, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (state.error) toast({ title: "Couldn't add administrator", description: state.error, variant: "destructive" });
+    else if (state.success) {
+      toast({ title: "Administrator created", variant: "success" });
+      formRef.current?.reset();
+    }
+  }, [state]);
 
   return (
-    <form action={formAction} className="flex flex-wrap items-end gap-2">
+    <form ref={formRef} action={formAction} className="flex flex-wrap items-end gap-2">
       <div>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">Full name</label>
         <Input name="fullName" required className="h-9 w-48" />
@@ -37,8 +47,6 @@ export function NewAdminForm() {
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? "Creating…" : "Add Administrator"}
       </Button>
-      {state.error ? <p className="w-full text-sm text-red-600">{state.error}</p> : null}
-      {state.success ? <p className="w-full text-sm text-green-700">Administrator created.</p> : null}
     </form>
   );
 }

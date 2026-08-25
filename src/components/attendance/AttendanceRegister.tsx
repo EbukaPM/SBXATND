@@ -31,7 +31,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   qr_not_found: "This QR code is invalid or has expired.\nPlease scan today's attendance QR code.",
   qr_deactivated: "This QR code is invalid or has expired.\nPlease scan today's attendance QR code.",
   qr_expired: "This QR code has expired.\nPlease scan today's attendance QR code.",
-  qr_wrong_date: "This QR code is not valid for today.\nPlease scan today's attendance QR code.",
   qr_not_yet_active: "This QR code is not active yet.",
 };
 

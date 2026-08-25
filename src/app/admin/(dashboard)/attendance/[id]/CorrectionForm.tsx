@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { correctAttendanceAction, type CorrectionState } from "@/lib/actions/attendance";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import type { AttendanceRecord } from "@prisma/client";
 
 const initialState: CorrectionState = {};
@@ -17,6 +18,11 @@ function toLocalInputValue(date: Date | null): string {
 export function CorrectionForm({ record }: { record: AttendanceRecord }) {
   const action = correctAttendanceAction.bind(null, record.id);
   const [state, formAction, pending] = useActionState(action, initialState);
+
+  useEffect(() => {
+    if (state.error) toast({ title: "Correction failed", description: state.error, variant: "destructive" });
+    else if (state.success) toast({ title: "Correction saved", variant: "success" });
+  }, [state]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -61,8 +67,6 @@ export function CorrectionForm({ record }: { record: AttendanceRecord }) {
           placeholder="Employee forgot to clock out."
         />
       </div>
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-green-700">Correction saved.</p> : null}
       <Button type="submit" disabled={pending}>
         {pending ? "Saving…" : "Save correction"}
       </Button>
