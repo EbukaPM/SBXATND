@@ -1,0 +1,68 @@
+# Self-hosted stack. See docs/SELF_HOSTING.md for the full walkthrough.
+#
+# `postgres` and `minio` are included for convenience if you want everything
+# on one box; point DATABASE_URL / S3_* at existing infrastructure instead and
+# remove those two services if you already run Postgres/object storage
+# elsewhere (e.g. staying on Neon for the database).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: attendance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: attendance
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432" # bind to localhost only; nothing outside this host needs direct DB access
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:9001:9001" # MinIO console, optional — for browsing uploaded files
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3000:3000" # nginx (deploy/nginx.conf) proxies to this; not exposed directly
+
+  cron:
+    build:
+      context: ./deploy/cron
+    restart: unless-stopped
+    environment:
+      APP_URL: ${APP_URL}
+      CRON_SECRET: ${CRON_SECRET}
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  minio_data:

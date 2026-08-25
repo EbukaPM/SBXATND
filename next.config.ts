@@ -9,6 +9,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Produces a minimal, self-contained .next/standalone build (server + only the
+  // node_modules it actually needs) — what deploy/Dockerfile copies into the
+  // final image. Netlify's own build/plugin ignores this and does its own thing,
+  // so this is safe to leave on unconditionally; it doesn't affect Netlify deploys.
+  output: "standalone",
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

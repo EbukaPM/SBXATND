@@ -1,13 +1,18 @@
-import { getStore } from "@netlify/blobs";
+import { netlifyDriver } from "./drivers/netlify";
+import { s3Driver } from "./drivers/s3";
+import { localDriver } from "./drivers/local";
+import type { StorageDriver } from "./drivers/types";
 
 /**
- * Thin abstraction over the object-storage provider. Swapping providers later
- * (S3, Cloudinary, Supabase Storage) means changing only this file.
+ * Thin abstraction over the object-storage provider, selected at runtime via
+ * STORAGE_DRIVER ("netlify" | "s3" | "local", defaults to "netlify"). Every
+ * caller in the app uses only the functions below — swapping providers, or
+ * moving off Netlify entirely, never requires touching a caller.
  *
- * Netlify Blobs has no public CDN URL the way Vercel Blob does — every read
- * goes through our own code (docs.netlify.com/build/data-and-storage/netlify-blobs).
- * So `url` here is a path into our own serving route (app/api/blob/[...key]/route.ts),
- * which streams the blob back with its stored content type.
+ * None of the three backends have a public CDN URL the way Vercel Blob does, so
+ * `url` here is always a path into our own serving route
+ * (app/api/blob/[...key]/route.ts), which streams the blob back with its stored
+ * content type.
  */
 export interface UploadResult {
   url: string;
@@ -16,17 +21,19 @@ export interface UploadResult {
 
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]);
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
-const STORE_NAME = "attendance-media";
 
 export class UploadValidationError extends Error {}
 
-function mediaStore() {
-  // Inside Netlify's own runtime (Functions / Next.js Route Handlers via the Next
-  // Runtime), siteID + token are injected automatically. Outside it (local `next dev`
-  // without the Netlify CLI), fall back to explicit credentials if provided.
-  const siteID = process.env.NETLIFY_SITE_ID;
-  const token = process.env.NETLIFY_BLOBS_TOKEN;
-  return siteID && token ? getStore(STORE_NAME, { siteID, token }) : getStore(STORE_NAME);
+function driver(): StorageDriver {
+  switch (process.env.STORAGE_DRIVER) {
+    case "s3":
+      return s3Driver;
+    case "local":
+      return localDriver;
+    case "netlify":
+    default:
+      return netlifyDriver;
+  }
 }
 
 function servingUrl(pathname: string): string {
@@ -54,13 +61,13 @@ export async function uploadImage(
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
   const pathname = `${folder}/${crypto.randomUUID()}-${safeName}`;
 
-  await mediaStore().set(pathname, new Blob([new Uint8Array(buffer)]), { metadata: { contentType: file.type } });
+  await driver().set(pathname, buffer, file.type);
 
   return { url: servingUrl(pathname), pathname };
 }
 
 export async function deleteImage(pathname: string): Promise<void> {
-  await mediaStore().delete(pathname);
+  await driver().delete(pathname);
 }
 
 /** For server-generated content (rendered PDFs, QR PNGs) — not user-uploaded, so it skips upload validation. */
@@ -69,16 +76,13 @@ export async function uploadGeneratedBuffer(
   buffer: Buffer,
   contentType: string
 ): Promise<UploadResult> {
-  await mediaStore().set(pathname, new Blob([new Uint8Array(buffer)]), { metadata: { contentType } });
+  await driver().set(pathname, buffer, contentType);
   return { url: servingUrl(pathname), pathname };
 }
 
 /** Used only by the serving route (app/api/blob/[...key]/route.ts). */
 export async function readStoredMedia(pathname: string): Promise<{ data: ArrayBuffer; contentType: string } | null> {
-  const result = await mediaStore().getWithMetadata(pathname, { type: "arrayBuffer" });
-  if (!result) return null;
-  const contentType = typeof result.metadata?.contentType === "string" ? result.metadata.contentType : "application/octet-stream";
-  return { data: result.data, contentType };
+  return driver().get(pathname);
 }
 
 function looksLikeDeclaredType(buffer: Buffer, declaredType: string): boolean {

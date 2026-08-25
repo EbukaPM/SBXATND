@@ -16,6 +16,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1117.0",
     "@netlify/blobs": "^10.7.13",
     "@netlify/functions": "^5.3.0",
     "@prisma/client": "^6.19.3",

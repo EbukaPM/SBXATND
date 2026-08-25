@@ -1,0 +1,11 @@
+# Mirrors the schedules declared in netlify/functions/*.ts. Each line calls the
+# same /api/cron/* route those Netlify Scheduled Functions call, authenticated
+# with the same CRON_SECRET bearer token. Times are UTC (container default).
+#
+# sweep-qr            — every 5 minutes  (netlify/functions/sweep-qr.ts)
+# stale-networks      — every 10 minutes (netlify/functions/stale-networks.ts)
+# daily-housekeeping  — 00:05 UTC daily  (netlify/functions/daily-housekeeping.ts)
+
+*/5 * * * * . /etc/cron.env; curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/sweep-qr" >> /var/log/cron.log 2>&1
+*/10 * * * * . /etc/cron.env; curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/stale-networks" >> /var/log/cron.log 2>&1
+5 0 * * * . /etc/cron.env; curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/daily-housekeeping" >> /var/log/cron.log 2>&1
