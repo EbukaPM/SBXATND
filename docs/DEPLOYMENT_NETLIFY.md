@@ -1,5 +1,9 @@
 # Deploying to Netlify
 
+> Planning to move off Netlify to your own server instead? See
+> [docs/SELF_HOSTING.md](SELF_HOSTING.md) — the app has no hard Netlify
+> dependency; storage, cron, and IP verification are all swappable via env vars.
+
 ## 1. Provision the database
 
 Create a Neon (or Supabase) Postgres project. Copy the pooled connection string into

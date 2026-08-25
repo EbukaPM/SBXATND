@@ -13,10 +13,20 @@ import type { NextRequest } from "next/server";
  * controlled inputs — a raw `x-forwarded-for` parsed by hand, or any `ip`
  * field in a request body — must never be trusted for security decisions.
  *
- * Locally (no Netlify edge in front of the request), that header is absent,
+ * Self-hosted behind your own reverse proxy (nginx/Traefik/HAProxy) instead of
+ * Netlify: set TRUSTED_IP_HEADER to whatever header YOUR proxy sets from the
+ * real TCP connection (e.g. "x-real-ip"). This is only safe if the proxy is
+ * configured to overwrite that header on every request rather than pass through
+ * whatever the client sent — see deploy/nginx.conf, which does this correctly
+ * (`proxy_set_header X-Real-IP $remote_addr;` always replaces, never appends).
+ * If a client could set this header themselves, they could spoof being on the
+ * office network from anywhere. Defaults to Netlify's header, so this is a
+ * zero-code-change env var flip when migrating off Netlify.
+ *
+ * Locally (no reverse proxy in front of the request), that header is absent,
  * so we fall back to `x-forwarded-for` for developer convenience. That
- * fallback path is NEVER reached in Netlify production traffic and must not
- * be relied on for security there.
+ * fallback path is NEVER reached in production traffic and must not be relied
+ * on for security there.
  */
 export function getClientIp(request: NextRequest | Request): string | null {
   return getClientIpFromHeaders(request.headers);
@@ -26,12 +36,13 @@ export function getClientIp(request: NextRequest | Request): string | null {
  * Same logic as getClientIp, but for contexts that only have a Headers object —
  * Server Actions read the incoming request's headers via next/headers' `headers()`
  * rather than getting a Request object directly. Both paths see the identical
- * Netlify-set header, since a Server Action's POST still passes through the same
- * edge as any other request.
+ * edge/proxy-set header, since a Server Action's POST still passes through the
+ * same edge as any other request.
  */
 export function getClientIpFromHeaders(headers: Headers): string | null {
-  const fromNetlify = headers.get("x-nf-client-connection-ip");
-  if (fromNetlify) return normalizeIp(fromNetlify);
+  const trustedHeader = process.env.TRUSTED_IP_HEADER || "x-nf-client-connection-ip";
+  const fromEdge = headers.get(trustedHeader);
+  if (fromEdge) return normalizeIp(fromEdge);
 
   if (process.env.NODE_ENV !== "production") {
     const forwarded = headers.get("x-forwarded-for");

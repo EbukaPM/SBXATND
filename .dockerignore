@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.netlify
+netlify/functions
+coverage
+*.log
+.env
+.env.local
+storage
